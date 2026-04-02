@@ -87,8 +87,8 @@ export function registerIpcHandlers(): void {
     await shell.openExternal(url)
   })
 
-  ipcMain.handle('open-settings', () => {
-    showSettings()
+  ipcMain.handle('open-settings', (_event, args?: { tab?: string }) => {
+    showSettings(args?.tab)
   })
 
   ipcMain.handle('get-harvest-projects', async () => {

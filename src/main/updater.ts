@@ -54,7 +54,7 @@ export function installUpdate(): void {
 
 /** Open settings and trigger the update flow from there. */
 export function openSettingsAndUpdate(): void {
-  showSettings()
+  showSettings('general')
   // Small delay so the settings window is ready to receive status events
   setTimeout(() => checkForUpdates(), 500)
 }

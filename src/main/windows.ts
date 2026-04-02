@@ -72,7 +72,7 @@ export function showNotification(view: NotificationView): void {
   createNotificationWindow(view)
 }
 
-export function showSettings(): void {
+export function showSettings(tab?: string): void {
   // Close notification if open
   closeNotification()
 
@@ -101,7 +101,8 @@ export function showSettings(): void {
     }
   })
 
-  settingsWindow.loadURL(getRendererUrl('settings'))
+  const url = getRendererUrl('settings') + (tab ? `&tab=${tab}` : '')
+  settingsWindow.loadURL(url)
 
   settingsWindow.once('ready-to-show', () => {
     settingsWindow?.show()

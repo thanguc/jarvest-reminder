@@ -83,13 +83,21 @@ function ConnectCard({
 
 type Tab = 'general' | 'reminder' | 'about'
 
+function getInitialTab(): Tab {
+  const params = new URLSearchParams(window.location.search)
+  const tab = params.get('tab')
+  if (tab === 'general' || tab === 'reminder' || tab === 'about') return tab
+  return 'reminder'
+}
+
 export default function SettingsDialog(): JSX.Element {
-  const [activeTab, setActiveTab] = useState<Tab>('reminder')
+  const [activeTab, setActiveTab] = useState<Tab>(getInitialTab)
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [forceDirty, setForceDirty] = useState(false)
   const [authorizingJira, setAuthorizingJira] = useState(false)
   const [authorizingHarvest, setAuthorizingHarvest] = useState(false)
   const [jiraError, setJiraError] = useState('')
@@ -98,7 +106,7 @@ export default function SettingsDialog(): JSX.Element {
   const savedConfig = useRef<AppConfig>(DEFAULT_CONFIG)
 
   const isDirty =
-    JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule)
+    forceDirty || JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule)
 
   useEffect(() => {
     window.jarvest.getConfig().then((c) => {
@@ -162,11 +170,17 @@ export default function SettingsDialog(): JSX.Element {
   const handleSave = async (): Promise<void> => {
     const e: Record<string, string> = {}
     if (config.schedule.workDays.length === 0) e['schedule.workDays'] = 'Select at least one day'
+    const startMinutes = config.schedule.workStartHour * 60 + config.schedule.workStartMinute
+    const endMinutes = config.schedule.workEndHour * 60 + config.schedule.workEndMinute
+    if (startMinutes >= endMinutes) e['schedule.workHours'] = 'Start time must be before end time'
+    if (config.schedule.checkPeriodMinutes < 5 || config.schedule.checkPeriodMinutes > 240) e['schedule.checkPeriod'] = 'Must be between 5 and 240 minutes'
     if (Object.keys(e).length > 0) {
       setErrors(e)
+      setForceDirty(true)
       return
     }
     setErrors({})
+    setForceDirty(false)
     setSaving(true)
     setSaved(false)
     try {
@@ -430,8 +444,11 @@ export default function SettingsDialog(): JSX.Element {
                       const [h, m] = e.target.value.split(':').map(Number)
                       updateSchedule('workStartHour', h)
                       updateSchedule('workStartMinute', m)
+                      setErrors((prev) => ({ ...prev, 'schedule.workHours': '' }))
                     }}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                    className={`text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-2 ${
+                      errors['schedule.workHours'] ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-[#1558BC]'
+                    }`}
                   />
                   <span className="text-gray-400">to</span>
                   <input
@@ -441,31 +458,51 @@ export default function SettingsDialog(): JSX.Element {
                       const [h, m] = e.target.value.split(':').map(Number)
                       updateSchedule('workEndHour', h)
                       updateSchedule('workEndMinute', m)
+                      setErrors((prev) => ({ ...prev, 'schedule.workHours': '' }))
                     }}
-                    className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                    className={`text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-2 ${
+                      errors['schedule.workHours'] ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-[#1558BC]'
+                    }`}
                   />
+                  {errors['schedule.workHours'] && (
+                    <div className="relative group">
+                      <svg className="w-4 h-4 text-red-500 cursor-pointer" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap bg-red-600 text-white text-xs rounded px-2 py-1 shadow-lg">
+                        {errors['schedule.workHours']}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex items-start gap-2">
-                  <label className="text-sm text-gray-600 w-24 mt-1">Work days</label>
-                  <div>
-                    <div className="flex gap-1">
-                      {dayLabels.map((label, i) => (
-                        <button
-                          key={label}
-                          onClick={() => { toggleDay(i); setErrors((prev) => ({ ...prev, 'schedule.workDays': '' })) }}
-                          className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
-                            config.schedule.workDays.includes(i)
-                              ? 'bg-[#1558BC] text-white'
-                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                          }`}
-                        >
-                          {label.charAt(0)}
-                        </button>
-                      ))}
-                    </div>
-                    {errors['schedule.workDays'] && <p className="text-xs text-red-500 mt-0.5">{errors['schedule.workDays']}</p>}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 w-24">Work days</label>
+                  <div className="flex gap-1">
+                    {dayLabels.map((label, i) => (
+                      <button
+                        key={label}
+                        onClick={() => { toggleDay(i); setErrors((prev) => ({ ...prev, 'schedule.workDays': '' })) }}
+                        className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                          config.schedule.workDays.includes(i)
+                            ? 'bg-[#1558BC] text-white'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {label.charAt(0)}
+                      </button>
+                    ))}
                   </div>
+                  {errors['schedule.workDays'] && (
+                    <div className="relative group">
+                      <svg className="w-4 h-4 text-red-500 cursor-pointer" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap bg-red-600 text-white text-xs rounded px-2 py-1 shadow-lg">
+                        {errors['schedule.workDays']}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -475,10 +512,25 @@ export default function SettingsDialog(): JSX.Element {
                     min="5"
                     max="240"
                     value={config.schedule.checkPeriodMinutes}
-                    onChange={(e) => updateSchedule('checkPeriodMinutes', Number(e.target.value))}
-                    className="w-20 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                    onChange={(e) => {
+                      updateSchedule('checkPeriodMinutes', Number(e.target.value))
+                      setErrors((prev) => ({ ...prev, 'schedule.checkPeriod': '' }))
+                    }}
+                    className={`w-20 text-sm border rounded-md px-2 py-1 focus:outline-none focus:ring-2 ${
+                      errors['schedule.checkPeriod'] ? 'border-red-400 focus:ring-red-300' : 'border-gray-300 focus:ring-[#1558BC]'
+                    }`}
                   />
                   <span className="text-sm text-gray-500">minutes</span>
+                  {errors['schedule.checkPeriod'] && (
+                    <div className="relative group">
+                      <svg className="w-4 h-4 text-red-500 cursor-pointer" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block whitespace-nowrap bg-red-600 text-white text-xs rounded px-2 py-1 shadow-lg">
+                        {errors['schedule.checkPeriod']}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </fieldset>

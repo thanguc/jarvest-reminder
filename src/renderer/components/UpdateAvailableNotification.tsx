@@ -16,7 +16,7 @@ export default function UpdateAvailableNotification(): JSX.Element {
 
   const handleUpdate = (): void => {
     window.jarvest.dismiss()
-    window.jarvest.openSettings()
+    window.jarvest.openSettings('general')
   }
 
   return (
