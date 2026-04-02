@@ -3,7 +3,7 @@ import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray } from './tray'
 import { registerIpcHandlers } from './ipc-handlers'
 import { startScheduler, stopScheduler } from './scheduler'
-import { isConfigured } from './services/config'
+import { getConfig, isConfigured } from './services/config'
 import { showSettings } from './windows'
 
 // Prevent multiple instances
@@ -26,6 +26,10 @@ app.whenReady().then(() => {
 
   registerIpcHandlers()
   createTray()
+
+  // Apply startup setting from saved config
+  const config = getConfig()
+  app.setLoginItemSettings({ openAtLogin: config.runOnStartup })
 
   // If not configured, show settings on first run
   if (!isConfigured()) {

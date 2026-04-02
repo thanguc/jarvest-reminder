@@ -24,6 +24,7 @@ export interface AppConfig {
     workDays: number[] // 0=Sun, 1=Mon, ..., 6=Sat. Default [1,2,3,4,5]
     checkPeriodMinutes: number // default 60
   }
+  runOnStartup: boolean // default true
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -36,7 +37,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     workEndMinute: 0,
     workDays: [1, 2, 3, 4, 5],
     checkPeriodMinutes: 60
-  }
+  },
+  runOnStartup: true
 }
 
 // ── Harvest API Types ──

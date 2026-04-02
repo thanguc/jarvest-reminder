@@ -1,4 +1,4 @@
-import { ipcMain, shell } from 'electron'
+import { app, ipcMain, shell } from 'electron'
 import { getConfig, saveConfig } from './services/config'
 import {
   getRunningTimer,
@@ -20,6 +20,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('save-config', (_event, config: AppConfig) => {
     saveConfig(config)
+    app.setLoginItemSettings({ openAtLogin: config.runOnStartup })
     restartScheduler()
   })
 

@@ -93,7 +93,9 @@ export default function SettingsDialog(): JSX.Element {
   const [harvestError, setHarvestError] = useState('')
   const savedConfig = useRef<AppConfig>(DEFAULT_CONFIG)
 
-  const isDirty = JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule)
+  const isDirty =
+    JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule) ||
+    config.runOnStartup !== savedConfig.current.runOnStartup
 
   useEffect(() => {
     window.jarvest.getConfig().then((c) => {
@@ -252,6 +254,40 @@ export default function SettingsDialog(): JSX.Element {
             onAuthorize={handleAuthorizeHarvest}
             onDisconnect={handleDisconnectHarvest}
           />
+        </fieldset>
+
+        {/* General Section */}
+        <fieldset>
+          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            General
+          </legend>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 mr-3">
+                <p className="text-sm font-medium text-gray-700">Run on Windows startup</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  We highly recommend keeping this on — it ensures Jarvest Reminder is always running when you log in.
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={config.runOnStartup}
+                onClick={() => {
+                  setConfig((prev) => ({ ...prev, runOnStartup: !prev.runOnStartup }))
+                  setSaved(false)
+                }}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:ring-offset-1 ${
+                  config.runOnStartup ? 'bg-[#1558BC]' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                    config.runOnStartup ? 'translate-x-4' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
         </fieldset>
 
         {/* Schedule Section */}
