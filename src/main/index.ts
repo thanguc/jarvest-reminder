@@ -1,10 +1,11 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, powerMonitor } from 'electron'
 import { electronApp, optimizer } from '@electron-toolkit/utils'
 import { createTray } from './tray'
 import { registerIpcHandlers } from './ipc-handlers'
-import { startScheduler, stopScheduler } from './scheduler'
+import { startScheduler, stopScheduler, restartScheduler } from './scheduler'
 import { getConfig, isConfigured } from './services/config'
 import { showSettings } from './windows'
+import { initUpdater } from './updater'
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
@@ -26,6 +27,7 @@ app.whenReady().then(() => {
 
   registerIpcHandlers()
   createTray()
+  initUpdater()
 
   // Apply startup setting from saved config
   const config = getConfig()
@@ -37,6 +39,18 @@ app.whenReady().then(() => {
   }
 
   startScheduler()
+
+  // Re-align timers after sleep/hibernation since setTimeout/setInterval freeze during sleep
+  powerMonitor.on('resume', () => {
+    console.log('[power] system resumed from sleep — restarting scheduler')
+    restartScheduler()
+  })
+
+  // Trigger an immediate check when the user unlocks the screen
+  powerMonitor.on('unlock-screen', () => {
+    console.log('[power] screen unlocked — restarting scheduler')
+    restartScheduler()
+  })
 })
 
 app.on('window-all-closed', () => {

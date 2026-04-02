@@ -5,6 +5,7 @@ import { isConfigured } from './services/config'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
 import { HarvestTimeEntry } from '../shared/types'
+import { getUpdateStatus, checkForUpdates, installUpdate, onUpdateStatusChange } from './updater'
 
 let tray: Tray | null = null
 let lastRefreshTime = 0
@@ -72,10 +73,22 @@ function applyTrayState(
     ? { label: statusText, enabled: false }
     : { label: statusText, submenu: buildStatusSubmenu(state) }
 
+  const updateStatus = getUpdateStatus()
+  const updateItem: MenuItemConstructorOptions =
+    updateStatus === 'ready'
+      ? { label: 'Restart to Update', click: () => installUpdate() }
+      : updateStatus === 'downloading'
+        ? { label: 'Downloading Update...', enabled: false }
+        : updateStatus === 'checking'
+          ? { label: 'Checking for Updates...', enabled: false }
+          : { label: 'Check for Updates', click: () => checkForUpdates() }
+
   const contextMenu = Menu.buildFromTemplate([
     statusItem,
     { type: 'separator' },
     { label: 'Settings', click: () => showSettings() },
+    { type: 'separator' },
+    updateItem,
     { label: 'Quit', click: () => app.quit() }
   ])
   tray.setContextMenu(contextMenu)
@@ -90,7 +103,8 @@ async function doRefresh(): Promise<void> {
     return
   }
   try {
-    const today = new Date().toISOString().split('T')[0]
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     const [runningTimer, dailyHours] = await Promise.all([
       getRunningTimer(),
       getDailyHours(today)
@@ -131,6 +145,10 @@ export function createTray(): Tray {
   tray.on('double-click', () => showSettings())
   tray.on('mouse-enter', () => triggerBackgroundRefresh())
   tray.on('right-click', () => triggerBackgroundRefresh())
+  onUpdateStatusChange(() => {
+    lastRefreshTime = 0
+    doRefresh().catch(console.error)
+  })
   return tray
 }
 

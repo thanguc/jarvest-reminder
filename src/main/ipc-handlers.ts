@@ -89,7 +89,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('authorize-jira', async () => {
     try {
       await authorizeJira()
-      refreshTrayStatus().catch(console.error)
+      forceRefreshTrayStatus().catch(console.error)
       return null
     } catch (e) {
       return (e as Error).message
@@ -99,7 +99,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('authorize-harvest', async () => {
     try {
       await authorizeHarvest()
-      refreshTrayStatus().catch(console.error)
+      forceRefreshTrayStatus().catch(console.error)
       return null
     } catch (e) {
       return (e as Error).message
@@ -108,11 +108,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('disconnect-jira', () => {
     disconnectJira()
-    refreshTrayStatus().catch(console.error)
+    forceRefreshTrayStatus().catch(console.error)
   })
 
   ipcMain.handle('disconnect-harvest', () => {
     disconnectHarvest()
-    refreshTrayStatus().catch(console.error)
+    forceRefreshTrayStatus().catch(console.error)
   })
 }

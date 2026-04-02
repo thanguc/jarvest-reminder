@@ -3,6 +3,8 @@ import { getConfig } from './config'
 import { refreshJiraToken } from './oauth'
 import { JiraIssue } from '../../shared/types'
 
+const FETCH_TIMEOUT_MS = 30_000
+
 function getBaseUrl(): string {
   const config = getConfig()
   return `https://api.atlassian.com/ex/jira/${config.jira.cloudId}`
@@ -21,14 +23,16 @@ async function jiraFetch(path: string, options: RequestInit = {}): Promise<Respo
   const url = `${getBaseUrl()}${path}`
   let res = await net.fetch(url, {
     ...options,
-    headers: { ...getHeaders(), ...(options.headers as Record<string, string>) }
+    headers: { ...getHeaders(), ...(options.headers as Record<string, string>) },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   })
 
   if (res.status === 401) {
     await refreshJiraToken()
     res = await net.fetch(url, {
       ...options,
-      headers: { ...getHeaders(), ...(options.headers as Record<string, string>) }
+      headers: { ...getHeaders(), ...(options.headers as Record<string, string>) },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     })
   }
 

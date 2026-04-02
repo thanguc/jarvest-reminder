@@ -1,5 +1,9 @@
 appId: com.jarvest.reminder
 productName: Jarvest Reminder
+publish:
+  provider: github
+  owner: thanguc
+  repo: jarvest-reminder
 directories:
   buildResources: resources
   output: dist

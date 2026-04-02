@@ -6,9 +6,11 @@ import { isEodSummaryShownToday, markEodSummaryShown } from './eod-state'
 
 export { markEodSummaryShown }
 
+let startupTimeout: ReturnType<typeof setTimeout> | null = null
 let checkTimeout: ReturnType<typeof setTimeout> | null = null
 let checkInterval: ReturnType<typeof setInterval> | null = null
 let eodTimeouts: ReturnType<typeof setTimeout>[] = []
+let midnightTimeout: ReturnType<typeof setTimeout> | null = null
 
 export function isWithinWorkingHoursNow(): boolean {
   const config = getConfig()
@@ -62,12 +64,16 @@ async function performCheck(): Promise<void> {
 
   try {
     if (!isWithinWorkingHoursNow()) {
-      // Startup check fired outside working hours — treat as an EOD check
       const config = getConfig()
       const now = new Date()
-      if (config.schedule.workDays.includes(now.getDay())) {
-        console.log('[scheduler] outside working hours — delegating to EOD check')
+      const currentMinutes = now.getHours() * 60 + now.getMinutes()
+      const endMinutes = config.schedule.workEndHour * 60 + config.schedule.workEndMinute
+      // Only do an EOD check if we're past the work end time, not before the day starts
+      if (config.schedule.workDays.includes(now.getDay()) && currentMinutes >= endMinutes) {
+        console.log('[scheduler] past work end — delegating to EOD check')
         await performEndOfDayCheck()
+      } else {
+        console.log('[scheduler] before work start — nothing to do')
       }
       return
     }
@@ -92,7 +98,10 @@ export function startScheduler(): void {
   const { workStartHour, workStartMinute, workEndHour, workEndMinute, workDays, checkPeriodMinutes } = config.schedule
 
   // Startup check after 5s (handles both in-hours and outside-hours cases)
-  setTimeout(() => performCheck(), 5000)
+  startupTimeout = setTimeout(() => performCheck(), 5000)
+
+  // Schedule a restart at midnight so the scheduler works across days
+  scheduleMidnightRestart()
 
   const now = new Date()
   if (!workDays.includes(now.getDay())) return
@@ -124,7 +133,7 @@ export function startScheduler(): void {
         const intervalMs = checkPeriodMinutes * 60 * 1000
         checkInterval = setInterval(() => {
           const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
-          if (nowMins >= endMinutes) {
+          if (nowMins >= endMinutes || nowMins < startMinutes) {
             clearInterval(checkInterval!)
             checkInterval = null
             return
@@ -158,7 +167,23 @@ export function startScheduler(): void {
   console.log(`[scheduler] EOD checks scheduled at: ${scheduledEodTimes.join(', ') || 'none (all in the past)'}`)
 }
 
+function scheduleMidnightRestart(): void {
+  const now = new Date()
+  const midnight = new Date(now)
+  midnight.setHours(24, 0, 30, 0) // 30s past midnight to avoid edge cases
+  const msUntilMidnight = midnight.getTime() - now.getTime()
+  console.log(`[scheduler] midnight restart scheduled in ${Math.round(msUntilMidnight / 60000)}m`)
+  midnightTimeout = setTimeout(() => {
+    console.log(`[scheduler] midnight restart triggered at ${timestamp()}`)
+    restartScheduler()
+  }, msUntilMidnight)
+}
+
 export function stopScheduler(): void {
+  if (startupTimeout) {
+    clearTimeout(startupTimeout)
+    startupTimeout = null
+  }
   if (checkTimeout) {
     clearTimeout(checkTimeout)
     checkTimeout = null
@@ -169,6 +194,10 @@ export function stopScheduler(): void {
   }
   eodTimeouts.forEach(t => clearTimeout(t))
   eodTimeouts = []
+  if (midnightTimeout) {
+    clearTimeout(midnightTimeout)
+    midnightTimeout = null
+  }
 }
 
 export function restartScheduler(): void {

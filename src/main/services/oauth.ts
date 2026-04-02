@@ -143,7 +143,15 @@ export async function authorizeHarvest(): Promise<void> {
   saveConfig(config)
 }
 
-export async function refreshHarvestToken(): Promise<void> {
+let pendingHarvestRefresh: Promise<void> | null = null
+
+export function refreshHarvestToken(): Promise<void> {
+  if (pendingHarvestRefresh) return pendingHarvestRefresh
+  pendingHarvestRefresh = doRefreshHarvestToken().finally(() => { pendingHarvestRefresh = null })
+  return pendingHarvestRefresh
+}
+
+async function doRefreshHarvestToken(): Promise<void> {
   const config = getConfig()
   const res = await net.fetch('https://id.getharvest.com/api/v2/oauth2/token', {
     method: 'POST',
@@ -253,7 +261,15 @@ export async function authorizeJira(): Promise<void> {
   saveConfig(config)
 }
 
-export async function refreshJiraToken(): Promise<void> {
+let pendingJiraRefresh: Promise<void> | null = null
+
+export function refreshJiraToken(): Promise<void> {
+  if (pendingJiraRefresh) return pendingJiraRefresh
+  pendingJiraRefresh = doRefreshJiraToken().finally(() => { pendingJiraRefresh = null })
+  return pendingJiraRefresh
+}
+
+async function doRefreshJiraToken(): Promise<void> {
   const config = getConfig()
   const res = await net.fetch('https://auth.atlassian.com/oauth/token', {
     method: 'POST',

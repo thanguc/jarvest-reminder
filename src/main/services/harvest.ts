@@ -9,6 +9,7 @@ import {
 } from '../../shared/types'
 
 const BASE_URL = 'https://api.harvestapp.com/v2'
+const FETCH_TIMEOUT_MS = 30_000
 
 function getHeaders(): Record<string, string> {
   const config = getConfig()
@@ -24,14 +25,16 @@ async function harvestFetch(path: string, options: RequestInit = {}): Promise<Re
   const url = `${BASE_URL}${path}`
   let res = await net.fetch(url, {
     ...options,
-    headers: { ...getHeaders(), ...(options.headers as Record<string, string>) }
+    headers: { ...getHeaders(), ...(options.headers as Record<string, string>) },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
   })
 
   if (res.status === 401) {
     await refreshHarvestToken()
     res = await net.fetch(url, {
       ...options,
-      headers: { ...getHeaders(), ...(options.headers as Record<string, string>) }
+      headers: { ...getHeaders(), ...(options.headers as Record<string, string>) },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
     })
   }
 
@@ -111,7 +114,8 @@ export async function startTimerForTicket(issue: JiraIssue): Promise<HarvestTime
     )
   }
 
-  const today = new Date().toISOString().split('T')[0]
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   const body = {
     project_id: suggestion.project_id,
     task_id: suggestion.task_id,
