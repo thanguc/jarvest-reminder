@@ -2,6 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { NotificationView } from '../shared/types'
+import { getAppIcon } from './icon'
 
 const NOTIFICATION_WIDTH = 400
 const NOTIFICATION_HEIGHT = 280
@@ -37,6 +38,7 @@ export function showNotification(view: NotificationView): void {
     height: winHeight,
     x: width - winWidth - MARGIN,
     y: height - winHeight - MARGIN,
+    icon: getAppIcon(),
     frame: false,
     alwaysOnTop: true,
     skipTaskbar: true,
@@ -79,6 +81,7 @@ export function showSettings(): void {
     height: SETTINGS_HEIGHT,
     x: Math.round(screenWidth / 2 - SETTINGS_WIDTH / 2),
     y: Math.round(screenHeight / 2 - SETTINGS_HEIGHT / 2),
+    icon: getAppIcon(),
     frame: false,
     resizable: false,
     show: false,
