@@ -3,6 +3,9 @@ productName: Jarvest Timer
 directories:
   buildResources: resources
   output: dist
+extraResources:
+  - from: resources/icon.png
+    to: resources/icon.png
 files:
   - '!**/.vscode/*'
   - '!src/*'
