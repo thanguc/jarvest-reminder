@@ -13,7 +13,7 @@ if (!gotLock) {
 }
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.jarvest.timer')
+  electronApp.setAppUserModelId('com.jarvest.reminder')
 
   // Hide dock icon on macOS (tray-only app)
   if (process.platform === 'darwin') {

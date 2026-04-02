@@ -1,7 +1,7 @@
 {
-  "name": "jarvest-timer",
+  "name": "jarvest-reminder",
   "version": "1.0.0",
-  "description": "Jira + Harvest timer desktop app",
+  "description": "Jira + Harvest time-tracking reminder desktop app",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

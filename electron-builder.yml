@@ -1,5 +1,5 @@
-appId: com.jarvest.timer
-productName: Jarvest Timer
+appId: com.jarvest.reminder
+productName: Jarvest Reminder
 directories:
   buildResources: resources
   output: dist

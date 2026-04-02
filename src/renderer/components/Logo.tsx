@@ -4,7 +4,7 @@ export default function Logo({ size = 20 }: { size?: number }): JSX.Element {
   return (
     <img
       src={logoSrc}
-      alt="Jarvest Timer"
+      alt="Jarvest Reminder"
       width={size}
       height={size}
       style={{ borderRadius: size * 0.1875 }}

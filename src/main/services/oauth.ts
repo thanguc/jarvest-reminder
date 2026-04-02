@@ -13,14 +13,14 @@ const JIRA_CLIENT_SECRET = import.meta.env.MAIN_VITE_JIRA_CLIENT_SECRET as strin
 const JIRA_REDIRECT_URI = `http://localhost:${OAUTH_PORT}/auth/jira/callback`
 const JIRA_SCOPES = 'read:jira-user read:jira-work write:jira-work offline_access'
 
-const SUCCESS_HTML = `<!DOCTYPE html><html><head><title>Jarvest Timer</title>
+const SUCCESS_HTML = `<!DOCTYPE html><html><head><title>Jarvest Reminder</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb}
 .card{text-align:center;padding:2rem;border-radius:1rem;background:white;box-shadow:0 4px 24px rgba(0,0,0,.08)}
 h2{color:#1558BC;margin:0 0 .5rem}p{color:#6b7280;margin:0}</style></head>
-<body><div class="card"><h2>&#10003; Connected!</h2><p>You can close this tab and return to Jarvest Timer.</p></div></body></html>`
+<body><div class="card"><h2>&#10003; Connected!</h2><p>You can close this tab and return to Jarvest Reminder.</p></div></body></html>`
 
 const ERROR_HTML = (msg: string) =>
-  `<!DOCTYPE html><html><head><title>Jarvest Timer</title>
+  `<!DOCTYPE html><html><head><title>Jarvest Reminder</title>
 <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f9fafb}
 .card{text-align:center;padding:2rem;border-radius:1rem;background:white;box-shadow:0 4px 24px rgba(0,0,0,.08)}
 h2{color:#ef4444;margin:0 0 .5rem}p{color:#6b7280;margin:0}</style></head>
@@ -110,7 +110,7 @@ export async function authorizeHarvest(): Promise<void> {
   const accountRes = await net.fetch('https://id.getharvest.com/api/v2/accounts', {
     headers: {
       Authorization: `Bearer ${tokens.access_token}`,
-      'User-Agent': 'JarvestTimer'
+      'User-Agent': 'JarvestReminder'
     }
   })
 
@@ -124,7 +124,7 @@ export async function authorizeHarvest(): Promise<void> {
     headers: {
       Authorization: `Bearer ${tokens.access_token}`,
       'Harvest-Account-Id': String(account.id),
-      'User-Agent': 'JarvestTimer'
+      'User-Agent': 'JarvestReminder'
     }
   })
 

@@ -6,7 +6,7 @@ let tray: Tray | null = null
 
 export function createTray(): Tray {
   tray = new Tray(getTrayIcon())
-  tray.setToolTip('Jarvest Timer')
+  tray.setToolTip('Jarvest Reminder')
 
   const contextMenu = Menu.buildFromTemplate([
     {

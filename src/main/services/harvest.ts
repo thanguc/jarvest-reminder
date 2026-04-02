@@ -15,7 +15,7 @@ function getHeaders(): Record<string, string> {
   return {
     Authorization: `Bearer ${config.harvest.accessToken}`,
     'Harvest-Account-Id': config.harvest.accountId,
-    'User-Agent': 'JarvestTimer',
+    'User-Agent': 'JarvestReminder',
     'Content-Type': 'application/json'
   }
 }
