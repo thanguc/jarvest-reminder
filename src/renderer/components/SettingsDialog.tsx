@@ -81,7 +81,10 @@ function ConnectCard({
   )
 }
 
+type Tab = 'general' | 'reminder'
+
 export default function SettingsDialog(): JSX.Element {
+  const [activeTab, setActiveTab] = useState<Tab>('reminder')
   const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -95,8 +98,7 @@ export default function SettingsDialog(): JSX.Element {
   const savedConfig = useRef<AppConfig>(DEFAULT_CONFIG)
 
   const isDirty =
-    JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule) ||
-    config.runOnStartup !== savedConfig.current.runOnStartup
+    JSON.stringify(config.schedule) !== JSON.stringify(savedConfig.current.schedule)
 
   useEffect(() => {
     window.jarvest.getConfig().then((c) => {
@@ -224,238 +226,248 @@ export default function SettingsDialog(): JSX.Element {
         </button>
       </div>
 
-      {/* Form */}
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200">
+        {([['reminder', 'Reminder'], ['general', 'General']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === key
+                ? 'text-[#1558BC] border-b-2 border-[#1558BC]'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
       <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4">
-        {/* Jira Section */}
-        <fieldset>
-          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Jira
-          </legend>
-          <ConnectCard
-            label="Jira"
-            accentColor="#1558BC"
-            connected={!!config.jira.accessToken}
-            displayName={config.jira.userDisplayName}
-            authorizing={authorizingJira}
-            error={jiraError}
-            onAuthorize={handleAuthorizeJira}
-            onDisconnect={handleDisconnectJira}
-          />
-        </fieldset>
-
-        {/* Harvest Section */}
-        <fieldset>
-          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Harvest
-          </legend>
-          <ConnectCard
-            label="Harvest"
-            accentColor="#F27A20"
-            connected={!!config.harvest.accessToken}
-            displayName={config.harvest.userDisplayName}
-            authorizing={authorizingHarvest}
-            error={harvestError}
-            onAuthorize={handleAuthorizeHarvest}
-            onDisconnect={handleDisconnectHarvest}
-          />
-        </fieldset>
-
-        {/* General Section */}
-        <fieldset>
-          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            General
-          </legend>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <div className="min-w-0 mr-3">
-                <p className="text-sm font-medium text-gray-700">Run on Windows startup</p>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  We highly recommend keeping this on — it ensures Jarvest Reminder is always running when you log in.
-                </p>
-              </div>
-              <button
-                role="switch"
-                aria-checked={config.runOnStartup}
-                onClick={() => {
-                  setConfig((prev) => ({ ...prev, runOnStartup: !prev.runOnStartup }))
-                  setSaved(false)
-                }}
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:ring-offset-1 ${
-                  config.runOnStartup ? 'bg-[#1558BC]' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
-                    config.runOnStartup ? 'translate-x-4' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </fieldset>
-
-        {/* Update Section */}
-        <fieldset>
-          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Updates
-          </legend>
-          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">
-                Current version: {updateInfo?.currentVersion ?? '...'}
-              </p>
-            </div>
-            {/* Idle — no update available */}
-            {updateInfo?.status === 'idle' && !updateInfo.availableVersion && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">You are on the latest version.</p>
-                <button
-                  onClick={() => window.jarvest.checkForUpdates()}
-                  className="text-xs text-[#1558BC] hover:underline font-medium shrink-0 ml-2"
-                >
-                  Check for Updates
-                </button>
-              </div>
-            )}
-            {/* Idle — update previously found but not yet downloaded */}
-            {updateInfo?.status === 'idle' && updateInfo.availableVersion && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-700">
-                  Version <span className="font-medium">{updateInfo.availableVersion}</span> is available.
-                </p>
-                <button
-                  onClick={() => window.jarvest.checkForUpdates()}
-                  className="flex items-center gap-1.5 text-xs text-white bg-[#1558BC] px-3 py-1.5 rounded-md hover:bg-[#0f4a9e] transition-colors font-medium shrink-0 ml-2"
-                >
-                  Update
-                </button>
-              </div>
-            )}
-            {/* Checking */}
-            {updateInfo?.status === 'checking' && (
-              <div className="flex items-center gap-2">
-                <SpinnerIcon />
-                <p className="text-sm text-gray-600">Checking for updates...</p>
-              </div>
-            )}
-            {/* Downloading */}
-            {updateInfo?.status === 'downloading' && (
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <SpinnerIcon />
-                  <p className="text-sm text-gray-600">
-                    Downloading {updateInfo.availableVersion ? `v${updateInfo.availableVersion}` : 'update'}...
-                  </p>
-                </div>
-                {updateInfo.downloadProgress > 0 && (
-                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                    <div
-                      className="bg-[#1558BC] h-1.5 rounded-full transition-all"
-                      style={{ width: `${updateInfo.downloadProgress}%` }}
-                    />
+        {activeTab === 'general' && (
+          <>
+            {/* Startup Section */}
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Startup
+              </legend>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 mr-3">
+                    <p className="text-sm font-medium text-gray-700">Run on Windows startup</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      We highly recommend keeping this on — it ensures Jarvest Reminder is always running when you log in.
+                    </p>
                   </div>
-                )}
-              </div>
-            )}
-            {/* Ready to install */}
-            {updateInfo?.status === 'ready' && (
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-green-700 font-medium">
-                    Version {updateInfo.availableVersion} is ready to install.
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">Restart the app to apply the update.</p>
-                </div>
-                <button
-                  onClick={() => window.jarvest.installUpdate()}
-                  className="flex items-center gap-1.5 text-xs text-white bg-green-600 px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors font-medium shrink-0 ml-2"
-                >
-                  Restart
-                </button>
-              </div>
-            )}
-            {/* Error */}
-            {updateInfo?.status === 'error' && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-red-600">{updateInfo.error || 'Update check failed.'}</p>
-                <button
-                  onClick={() => window.jarvest.checkForUpdates()}
-                  className="text-xs text-[#1558BC] hover:underline font-medium shrink-0 ml-2"
-                >
-                  Retry
-                </button>
-              </div>
-            )}
-          </div>
-        </fieldset>
-
-        {/* Schedule Section */}
-        <fieldset>
-          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-            Schedule
-          </legend>
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 w-24">Work hours</label>
-              <input
-                type="time"
-                value={`${String(config.schedule.workStartHour).padStart(2, '0')}:${String(config.schedule.workStartMinute).padStart(2, '0')}`}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(':').map(Number)
-                  updateSchedule('workStartHour', h)
-                  updateSchedule('workStartMinute', m)
-                }}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
-              />
-              <span className="text-gray-400">to</span>
-              <input
-                type="time"
-                value={`${String(config.schedule.workEndHour).padStart(2, '0')}:${String(config.schedule.workEndMinute).padStart(2, '0')}`}
-                onChange={(e) => {
-                  const [h, m] = e.target.value.split(':').map(Number)
-                  updateSchedule('workEndHour', h)
-                  updateSchedule('workEndMinute', m)
-                }}
-                className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
-              />
-            </div>
-
-            <div className="flex items-start gap-2">
-              <label className="text-sm text-gray-600 w-24 mt-1">Work days</label>
-              <div>
-                <div className="flex gap-1">
-                  {dayLabels.map((label, i) => (
-                    <button
-                      key={label}
-                      onClick={() => { toggleDay(i); setErrors((prev) => ({ ...prev, 'schedule.workDays': '' })) }}
-                      className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
-                        config.schedule.workDays.includes(i)
-                          ? 'bg-[#1558BC] text-white'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  <button
+                    role="switch"
+                    aria-checked={config.runOnStartup}
+                    onClick={() => {
+                      const newValue = !config.runOnStartup
+                      setConfig((prev) => ({ ...prev, runOnStartup: newValue }))
+                      savedConfig.current = { ...savedConfig.current, runOnStartup: newValue }
+                      window.jarvest.setRunOnStartup(newValue)
+                    }}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:ring-offset-1 ${
+                      config.runOnStartup ? 'bg-[#1558BC]' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transform transition-transform ${
+                        config.runOnStartup ? 'translate-x-4' : 'translate-x-0'
                       }`}
-                    >
-                      {label.charAt(0)}
-                    </button>
-                  ))}
+                    />
+                  </button>
                 </div>
-                {errors['schedule.workDays'] && <p className="text-xs text-red-500 mt-0.5">{errors['schedule.workDays']}</p>}
               </div>
-            </div>
+            </fieldset>
 
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600 w-24">Check every</label>
-              <input
-                type="number"
-                min="5"
-                max="240"
-                value={config.schedule.checkPeriodMinutes}
-                onChange={(e) => updateSchedule('checkPeriodMinutes', Number(e.target.value))}
-                className="w-20 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+            {/* Update Section */}
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Updates
+              </legend>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 mr-3">
+                    <p className="text-sm font-medium text-gray-700">Check for updates</p>
+                    {updateInfo?.status === 'idle' && !updateInfo.availableVersion && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        v{updateInfo?.currentVersion ?? '...'} — You are on the latest version.
+                      </p>
+                    )}
+                    {updateInfo?.status === 'idle' && updateInfo.availableVersion && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        v{updateInfo.currentVersion} — Version <span className="font-medium">{updateInfo.availableVersion}</span> is available.
+                      </p>
+                    )}
+                    {updateInfo?.status === 'checking' && (
+                      <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                        <SpinnerIcon /> Checking for updates...
+                      </p>
+                    )}
+                    {updateInfo?.status === 'downloading' && (
+                      <div className="mt-0.5 space-y-1">
+                        <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                          <SpinnerIcon /> Downloading {updateInfo.availableVersion ? `v${updateInfo.availableVersion}` : 'update'}...
+                        </p>
+                        {updateInfo.downloadProgress > 0 && (
+                          <div className="w-full bg-gray-200 rounded-full h-1.5">
+                            <div
+                              className="bg-[#1558BC] h-1.5 rounded-full transition-all"
+                              style={{ width: `${updateInfo.downloadProgress}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {updateInfo?.status === 'ready' && (
+                      <p className="text-xs text-green-600 mt-0.5">
+                        Version {updateInfo.availableVersion} is ready — restart to apply.
+                      </p>
+                    )}
+                    {updateInfo?.status === 'error' && (
+                      <p className="text-xs text-red-600 mt-0.5">
+                        {updateInfo.error || 'Update check failed.'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0">
+                    {updateInfo?.status === 'ready' ? (
+                      <button
+                        onClick={() => window.jarvest.installUpdate()}
+                        className="flex items-center gap-1.5 text-xs text-white bg-green-600 px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors font-medium"
+                      >
+                        Restart
+                      </button>
+                    ) : updateInfo?.status === 'idle' && updateInfo.availableVersion ? (
+                      <button
+                        onClick={() => window.jarvest.checkForUpdates()}
+                        className="flex items-center gap-1.5 text-xs text-white bg-[#1558BC] px-3 py-1.5 rounded-md hover:bg-[#0f4a9e] transition-colors font-medium"
+                      >
+                        Update
+                      </button>
+                    ) : updateInfo?.status === 'checking' || updateInfo?.status === 'downloading' ? null : (
+                      <button
+                        onClick={() => window.jarvest.checkForUpdates()}
+                        className="text-xs text-[#1558BC] hover:underline font-medium"
+                      >
+                        {updateInfo?.status === 'error' ? 'Retry' : 'Check now'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </>
+        )}
+
+        {activeTab === 'reminder' && (
+          <>
+            {/* Jira Section */}
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Jira
+              </legend>
+              <ConnectCard
+                label="Jira"
+                accentColor="#1558BC"
+                connected={!!config.jira.accessToken}
+                displayName={config.jira.userDisplayName}
+                authorizing={authorizingJira}
+                error={jiraError}
+                onAuthorize={handleAuthorizeJira}
+                onDisconnect={handleDisconnectJira}
               />
-              <span className="text-sm text-gray-500">minutes</span>
-            </div>
-          </div>
-        </fieldset>
+            </fieldset>
+
+            {/* Harvest Section */}
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Harvest
+              </legend>
+              <ConnectCard
+                label="Harvest"
+                accentColor="#F27A20"
+                connected={!!config.harvest.accessToken}
+                displayName={config.harvest.userDisplayName}
+                authorizing={authorizingHarvest}
+                error={harvestError}
+                onAuthorize={handleAuthorizeHarvest}
+                onDisconnect={handleDisconnectHarvest}
+              />
+            </fieldset>
+
+            {/* Schedule Section */}
+            <fieldset>
+              <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                Schedule
+              </legend>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 w-24">Work hours</label>
+                  <input
+                    type="time"
+                    value={`${String(config.schedule.workStartHour).padStart(2, '0')}:${String(config.schedule.workStartMinute).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(':').map(Number)
+                      updateSchedule('workStartHour', h)
+                      updateSchedule('workStartMinute', m)
+                    }}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                  />
+                  <span className="text-gray-400">to</span>
+                  <input
+                    type="time"
+                    value={`${String(config.schedule.workEndHour).padStart(2, '0')}:${String(config.schedule.workEndMinute).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(':').map(Number)
+                      updateSchedule('workEndHour', h)
+                      updateSchedule('workEndMinute', m)
+                    }}
+                    className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                  />
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <label className="text-sm text-gray-600 w-24 mt-1">Work days</label>
+                  <div>
+                    <div className="flex gap-1">
+                      {dayLabels.map((label, i) => (
+                        <button
+                          key={label}
+                          onClick={() => { toggleDay(i); setErrors((prev) => ({ ...prev, 'schedule.workDays': '' })) }}
+                          className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                            config.schedule.workDays.includes(i)
+                              ? 'bg-[#1558BC] text-white'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {label.charAt(0)}
+                        </button>
+                      ))}
+                    </div>
+                    {errors['schedule.workDays'] && <p className="text-xs text-red-500 mt-0.5">{errors['schedule.workDays']}</p>}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600 w-24">Check every</label>
+                  <input
+                    type="number"
+                    min="5"
+                    max="240"
+                    value={config.schedule.checkPeriodMinutes}
+                    onChange={(e) => updateSchedule('checkPeriodMinutes', Number(e.target.value))}
+                    className="w-20 text-sm border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-[#1558BC]"
+                  />
+                  <span className="text-sm text-gray-500">minutes</span>
+                </div>
+              </div>
+            </fieldset>
+          </>
+        )}
       </div>
 
       {/* Footer */}
@@ -469,13 +481,15 @@ export default function SettingsDialog(): JSX.Element {
         >
           Close
         </button>
-        <button
-          onClick={handleSave}
-          disabled={saving || !isDirty}
-          className="px-4 py-1.5 text-sm bg-[#1558BC] text-white rounded-md hover:bg-[#0f4a9e] disabled:opacity-50 transition-colors font-medium"
-        >
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        {activeTab === 'reminder' && (
+          <button
+            onClick={handleSave}
+            disabled={saving || !isDirty}
+            className="px-4 py-1.5 text-sm bg-[#1558BC] text-white rounded-md hover:bg-[#0f4a9e] disabled:opacity-50 transition-colors font-medium"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+        )}
       </div>
     </div>
   )

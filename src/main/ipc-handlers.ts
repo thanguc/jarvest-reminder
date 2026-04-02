@@ -27,6 +27,13 @@ export function registerIpcHandlers(): void {
     restartScheduler()
   })
 
+  ipcMain.handle('set-run-on-startup', (_event, enabled: boolean) => {
+    const config = getConfig()
+    config.runOnStartup = enabled
+    saveConfig(config)
+    app.setLoginItemSettings({ openAtLogin: enabled })
+  })
+
   ipcMain.handle('get-running-timer', async () => {
     return await getRunningTimer()
   })

@@ -4,6 +4,7 @@ import { AppConfig, JiraIssue, UpdateInfo } from '../shared/types'
 const api = {
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('get-config'),
   saveConfig: (config: AppConfig): Promise<void> => ipcRenderer.invoke('save-config', config),
+  setRunOnStartup: (enabled: boolean): Promise<void> => ipcRenderer.invoke('set-run-on-startup', enabled),
   getRunningTimer: () => ipcRenderer.invoke('get-running-timer'),
   getDailyHours: (date: string) => ipcRenderer.invoke('get-daily-hours', { date }),
   getJiraTickets: () => ipcRenderer.invoke('get-jira-tickets'),
