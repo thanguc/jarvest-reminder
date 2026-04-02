@@ -1,6 +1,74 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { JiraIssue } from '../../shared/types'
 import NotificationShell from './NotificationShell'
+
+function TicketDropdown({
+  tickets,
+  selectedIndex,
+  onSelect,
+  onRefresh
+}: {
+  tickets: JiraIssue[]
+  selectedIndex: number
+  onSelect: (i: number) => void
+  onRefresh: () => void
+}): JSX.Element {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent): void => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const selected = tickets[selectedIndex]
+  const label = selected ? `${selected.key}: ${selected.fields.summary}` : ''
+
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      <div ref={ref} className="relative flex-1 min-w-0">
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="w-full flex items-center justify-between gap-1 text-sm border border-gray-300 rounded-md px-2.5 py-2 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC] text-left"
+        >
+          <span className="truncate">{label}</span>
+          <svg className="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        {open && (
+          <ul className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+            {tickets.map((ticket, i) => {
+              const text = `${ticket.key}: ${ticket.fields.summary}`
+              return (
+                <li
+                  key={ticket.id}
+                  title={text}
+                  onClick={() => { onSelect(i); setOpen(false) }}
+                  className={`px-2.5 py-2 text-sm cursor-pointer truncate hover:bg-blue-50 ${i === selectedIndex ? 'bg-blue-50 text-[#1558BC] font-medium' : 'text-gray-800'}`}
+                >
+                  {text}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+      <button
+        onClick={onRefresh}
+        className="p-2 text-gray-500 hover:text-[#1558BC] hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
+        title="Refresh tickets"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+    </div>
+  )
+}
 
 export default function NoTimerNotification(): JSX.Element {
   const [tickets, setTickets] = useState<JiraIssue[]>([])
@@ -111,28 +179,12 @@ export default function NoTimerNotification(): JSX.Element {
           </p>
         </div>
       ) : (
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedIndex}
-            onChange={(e) => setSelectedIndex(Number(e.target.value))}
-            className="flex-1 text-sm border border-gray-300 rounded-md px-2.5 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC] truncate"
-          >
-            {tickets.map((ticket, i) => (
-              <option key={ticket.id} value={i}>
-                {ticket.key}: {ticket.fields.summary}
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={fetchTickets}
-            className="p-2 text-gray-500 hover:text-[#1558BC] hover:bg-gray-100 rounded-md transition-colors flex-shrink-0"
-            title="Refresh tickets"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-          </button>
-        </div>
+        <TicketDropdown
+          tickets={tickets}
+          selectedIndex={selectedIndex}
+          onSelect={setSelectedIndex}
+          onRefresh={fetchTickets}
+        />
       )}
     </NotificationShell>
   )

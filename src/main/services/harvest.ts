@@ -94,10 +94,10 @@ export async function getPlatformSuggestion(
   const data = await res.json()
 
   return {
-    project_id: data.project?.id ?? null,
-    task_id: data.task?.id ?? null,
-    project_name: data.project?.name ?? null,
-    task_name: data.task?.name ?? null
+    project_id: data.suggested_project_id ?? null,
+    task_id: data.suggested_task_id ?? null,
+    project_name: null,
+    task_name: null
   }
 }
 
