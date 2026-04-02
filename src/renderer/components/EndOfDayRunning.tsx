@@ -89,6 +89,9 @@ export default function EndOfDayRunning(): JSX.Element {
   const handleDismiss = (): void => {
     if (countdownRef.current) clearInterval(countdownRef.current)
     if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
+    if (entry && !stopped) {
+      window.jarvest.rescheduleEodCheck()
+    }
     window.jarvest.dismiss()
   }
 

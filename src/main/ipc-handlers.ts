@@ -11,7 +11,7 @@ import { getInProgressTickets } from './services/jira'
 import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
 import { closeNotification, closeSettings, showNotification, showSettings } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
-import { isWithinWorkingHoursNow, markEodSummaryShown } from './scheduler'
+import { isWithinWorkingHoursNow, markEodSummaryShown, restartScheduler, scheduleEodRecheck } from './scheduler'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('get-config', () => {
@@ -20,6 +20,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('save-config', (_event, config: AppConfig) => {
     saveConfig(config)
+    restartScheduler()
   })
 
   ipcMain.handle('get-running-timer', async () => {
@@ -49,6 +50,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('is-within-working-hours', () => {
     return isWithinWorkingHoursNow()
+  })
+
+  ipcMain.handle('reschedule-eod-check', () => {
+    scheduleEodRecheck()
   })
 
   ipcMain.handle('show-eod-summary', () => {

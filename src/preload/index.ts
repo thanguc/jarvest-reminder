@@ -13,6 +13,7 @@ const api = {
   dismiss: () => ipcRenderer.invoke('dismiss'),
   isWithinWorkingHours: (): Promise<boolean> => ipcRenderer.invoke('is-within-working-hours'),
   showEodSummary: (): Promise<void> => ipcRenderer.invoke('show-eod-summary'),
+  rescheduleEodCheck: (): Promise<void> => ipcRenderer.invoke('reschedule-eod-check'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', { url }),
   openSettings: () => ipcRenderer.invoke('open-settings'),
   getHarvestProjects: () => ipcRenderer.invoke('get-harvest-projects'),

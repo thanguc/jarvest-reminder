@@ -114,6 +114,7 @@ export interface IpcChannels {
   'start-timer-for-ticket': { args: JiraIssue; result: HarvestTimeEntry }
   'stop-timer': { args: { entryId: number }; result: void }
   'dismiss': { args: void; result: void }
+  'reschedule-eod-check': { args: void; result: void }
   'open-external': { args: { url: string }; result: void }
   'open-settings': { args: void; result: void }
   'get-harvest-projects': { args: void; result: HarvestProjectAssignment[] }
