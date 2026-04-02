@@ -20,20 +20,14 @@ function getRendererUrl(view: NotificationView): string {
   return `file://${join(__dirname, '../renderer/index.html')}?view=${view}`
 }
 
-export function showNotification(view: NotificationView): void {
-  // Close existing notification
-  if (notificationWindow && !notificationWindow.isDestroyed()) {
-    notificationWindow.close()
-    notificationWindow = null
-  }
-
+function createNotificationWindow(view: NotificationView): void {
   const display = screen.getPrimaryDisplay()
   const { width, height } = display.workAreaSize
 
   const winHeight = view === 'settings' ? SETTINGS_HEIGHT : NOTIFICATION_HEIGHT
   const winWidth = view === 'settings' ? SETTINGS_WIDTH : NOTIFICATION_WIDTH
 
-  notificationWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: winWidth,
     height: winHeight,
     x: width - winWidth - MARGIN,
@@ -52,16 +46,30 @@ export function showNotification(view: NotificationView): void {
       sandbox: false
     }
   })
+  notificationWindow = win
 
-  notificationWindow.loadURL(getRendererUrl(view))
+  win.loadURL(getRendererUrl(view))
 
-  notificationWindow.once('ready-to-show', () => {
-    notificationWindow?.show()
+  win.once('ready-to-show', () => {
+    win.show()
   })
 
-  notificationWindow.on('closed', () => {
-    notificationWindow = null
+  win.on('closed', () => {
+    if (notificationWindow === win) {
+      notificationWindow = null
+    }
   })
+}
+
+export function showNotification(view: NotificationView): void {
+  // Force-destroy all existing notification windows before showing a new one
+  BrowserWindow.getAllWindows().forEach((win) => {
+    if (win !== settingsWindow && !win.isDestroyed()) {
+      win.destroy()
+    }
+  })
+  notificationWindow = null
+  createNotificationWindow(view)
 }
 
 export function showSettings(): void {
@@ -79,8 +87,8 @@ export function showSettings(): void {
   settingsWindow = new BrowserWindow({
     width: SETTINGS_WIDTH,
     height: SETTINGS_HEIGHT,
-    x: Math.round(screenWidth / 2 - SETTINGS_WIDTH / 2),
-    y: Math.round(screenHeight / 2 - SETTINGS_HEIGHT / 2),
+    x: screenWidth - SETTINGS_WIDTH - MARGIN,
+    y: screenHeight - SETTINGS_HEIGHT - MARGIN,
     icon: getAppIcon(),
     frame: false,
     resizable: false,

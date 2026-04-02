@@ -13,7 +13,6 @@ export function createTray(): Tray {
       label: 'Settings',
       click: () => showSettings()
     },
-    { type: 'separator' },
     {
       label: 'Quit',
       click: () => app.quit()

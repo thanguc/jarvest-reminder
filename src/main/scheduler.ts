@@ -5,8 +5,22 @@ import { showNotification, isNotificationVisible } from './windows'
 let checkInterval: ReturnType<typeof setInterval> | null = null
 let endOfDayCheckInterval: ReturnType<typeof setInterval> | null = null
 let isEndOfDayMode = false
+let eodSummaryShownDate: string | null = null
 
-function isWithinWorkingHours(): boolean {
+function getTodayStr(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+function isEodSummaryShownToday(): boolean {
+  return eodSummaryShownDate === getTodayStr()
+}
+
+export function markEodSummaryShown(): void {
+  eodSummaryShownDate = getTodayStr()
+  isEndOfDayMode = false
+}
+
+export function isWithinWorkingHoursNow(): boolean {
   const config = getConfig()
   const now = new Date()
   const day = now.getDay()
@@ -16,6 +30,10 @@ function isWithinWorkingHours(): boolean {
 
   if (!config.schedule.workDays.includes(day)) return false
   return currentMinutes >= startMinutes && currentMinutes < endMinutes
+}
+
+function isWithinWorkingHours(): boolean {
+  return isWithinWorkingHoursNow()
 }
 
 function isEndOfDay(): boolean {
@@ -33,7 +51,8 @@ function isEndOfDay(): boolean {
 
 async function performCheck(): Promise<void> {
   if (!isConfigured()) return
-  if (isNotificationVisible()) return // Don't show another notification if one is visible
+  if (isNotificationVisible()) return
+  if (isEodSummaryShownToday()) return // Done for the day
 
   try {
     if (isEndOfDay() || isEndOfDayMode) {
@@ -41,7 +60,20 @@ async function performCheck(): Promise<void> {
       return
     }
 
-    if (!isWithinWorkingHours()) return
+    if (!isWithinWorkingHours()) {
+      // Outside working hours: still check if a timer was left running
+      const config = getConfig()
+      const now = new Date()
+      const day = now.getDay()
+      if (config.schedule.workDays.includes(day)) {
+        const runningTimer = await getRunningTimer()
+        if (runningTimer) {
+          isEndOfDayMode = true
+          showNotification('eod-running')
+        }
+      }
+      return
+    }
 
     const runningTimer = await getRunningTimer()
     if (!runningTimer) {
@@ -60,8 +92,10 @@ async function performEndOfDayCheck(): Promise<void> {
       isEndOfDayMode = true
       showNotification('eod-running')
     } else {
-      isEndOfDayMode = false
-      showNotification('eod-summary')
+      if (!isEodSummaryShownToday()) {
+        markEodSummaryShown()
+        showNotification('eod-summary')
+      }
     }
   } catch (error) {
     console.error('End-of-day check failed:', error)
@@ -81,7 +115,7 @@ export function startScheduler(): void {
 
   // Also check every minute for end-of-day transitions
   endOfDayCheckInterval = setInterval(() => {
-    if (isEndOfDay() && !isNotificationVisible()) {
+    if (isEndOfDay() && !isNotificationVisible() && !isEodSummaryShownToday()) {
       performEndOfDayCheck()
     }
   }, 60 * 1000)

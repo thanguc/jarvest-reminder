@@ -54,7 +54,7 @@ function ConnectCard({
           {connected ? (
             <button
               onClick={onDisconnect}
-              className="text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
+              className="text-xs text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-50"
             >
               Disconnect
             </button>
@@ -202,7 +202,7 @@ export default function SettingsDialog(): JSX.Element {
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-full">
+    <div className="bg-white rounded-lg shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#F27A20] to-[#1558BC] cursor-move" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <Logo size={20} />

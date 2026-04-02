@@ -9,8 +9,9 @@ import {
 } from './services/harvest'
 import { getInProgressTickets } from './services/jira'
 import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
-import { closeNotification, closeSettings, showSettings } from './windows'
+import { closeNotification, closeSettings, showNotification, showSettings } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
+import { isWithinWorkingHoursNow, markEodSummaryShown } from './scheduler'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('get-config', () => {
@@ -44,6 +45,15 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('dismiss', () => {
     closeNotification()
     closeSettings()
+  })
+
+  ipcMain.handle('is-within-working-hours', () => {
+    return isWithinWorkingHoursNow()
+  })
+
+  ipcMain.handle('show-eod-summary', () => {
+    markEodSummaryShown()
+    showNotification('eod-summary')
   })
 
   ipcMain.handle('open-external', async (_event, { url }: { url: string }) => {

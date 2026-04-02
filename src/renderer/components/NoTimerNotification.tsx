@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { JiraIssue } from '../../shared/types'
 import NotificationShell from './NotificationShell'
 
+const AUTO_START_SECONDS = 60
+const CLOSE_DELAY_SECONDS = 5
+
 function TicketDropdown({
   tickets,
   selectedIndex,
@@ -75,7 +78,13 @@ export default function NoTimerNotification(): JSX.Element {
   const [selectedIndex, setSelectedIndex] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [countdown, setCountdown] = useState(AUTO_START_SECONDS)
+  const [closeCountdown, setCloseCountdown] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const closeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const selectedIndexRef = useRef(0)
 
   const fetchTickets = async (): Promise<void> => {
     setLoading(true)
@@ -84,6 +93,7 @@ export default function NoTimerNotification(): JSX.Element {
       const result = await window.jarvest.getJiraTickets()
       setTickets(result)
       setSelectedIndex(0)
+      selectedIndexRef.current = 0
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch tickets')
     } finally {
@@ -95,14 +105,54 @@ export default function NoTimerNotification(): JSX.Element {
     fetchTickets()
   }, [])
 
+  // Start auto-start countdown when tickets load
+  useEffect(() => {
+    if (tickets.length === 0) return
+
+    let remaining = AUTO_START_SECONDS
+    setCountdown(remaining)
+    countdownRef.current = setInterval(() => {
+      remaining -= 1
+      if (remaining <= 0) {
+        if (countdownRef.current) clearInterval(countdownRef.current)
+        setCountdown(0)
+        handleStartTimer()
+      } else {
+        setCountdown(remaining)
+      }
+    }, 1000)
+
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current)
+    }
+  }, [tickets])
+
+  const startCloseCountdown = (): void => {
+    let remaining = CLOSE_DELAY_SECONDS
+    setCloseCountdown(remaining)
+    closeCountdownRef.current = setInterval(() => {
+      remaining -= 1
+      if (remaining <= 0) {
+        if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
+        setCloseCountdown(0)
+        window.jarvest.dismiss()
+      } else {
+        setCloseCountdown(remaining)
+      }
+    }, 1000)
+  }
+
   const handleStartTimer = async (): Promise<void> => {
-    if (tickets.length === 0 || starting) return
-    const selected = tickets[selectedIndex]
+    if (tickets.length === 0 || starting || started) return
+    const selected = tickets[selectedIndexRef.current]
+    if (countdownRef.current) clearInterval(countdownRef.current)
     setStarting(true)
     setError(null)
     try {
       await window.jarvest.startTimerForTicket(selected)
-      window.jarvest.dismiss()
+      setStarting(false)
+      setStarted(true)
+      startCloseCountdown()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to start timer')
       setStarting(false)
@@ -120,6 +170,8 @@ export default function NoTimerNotification(): JSX.Element {
   }
 
   const handleDismiss = (): void => {
+    if (countdownRef.current) clearInterval(countdownRef.current)
+    if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
     window.jarvest.dismiss()
   }
 
@@ -130,6 +182,15 @@ export default function NoTimerNotification(): JSX.Element {
       title="No Timer Running"
       actions={
         <>
+          {closeCountdown !== null ? (
+            <span className="text-xs text-gray-400 mr-auto">
+              Closing in {closeCountdown}s…
+            </span>
+          ) : hasTickets && !started && countdown > 0 && (
+            <span className="text-xs text-gray-400 mr-auto">
+              Auto-start in {countdown}s
+            </span>
+          )}
           <button
             onClick={handleDismiss}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-md transition-colors"
@@ -139,10 +200,10 @@ export default function NoTimerNotification(): JSX.Element {
           {hasTickets ? (
             <button
               onClick={handleStartTimer}
-              disabled={starting}
+              disabled={starting || started}
               className="px-4 py-1.5 text-sm bg-[#1558BC] text-white rounded-md hover:bg-[#0f4a9e] disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
             >
-              {starting ? 'Starting...' : 'Start Timer'}
+              {starting ? 'Starting…' : started ? 'Started' : 'Start Timer'}
             </button>
           ) : (
             <button
@@ -182,7 +243,7 @@ export default function NoTimerNotification(): JSX.Element {
         <TicketDropdown
           tickets={tickets}
           selectedIndex={selectedIndex}
-          onSelect={setSelectedIndex}
+          onSelect={(i) => { selectedIndexRef.current = i; setSelectedIndex(i) }}
           onRefresh={fetchTickets}
         />
       )}

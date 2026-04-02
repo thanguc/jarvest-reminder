@@ -3,14 +3,18 @@ import { HarvestTimeEntry } from '../../shared/types'
 import NotificationShell from './NotificationShell'
 
 const AUTO_STOP_SECONDS = 60
+const CLOSE_DELAY_SECONDS = 5
 
 export default function EndOfDayRunning(): JSX.Element {
   const [entry, setEntry] = useState<HarvestTimeEntry | null>(null)
   const [loading, setLoading] = useState(true)
   const [stopping, setStopping] = useState(false)
+  const [stopped, setStopped] = useState(false)
   const [countdown, setCountdown] = useState(AUTO_STOP_SECONDS)
+  const [closeCountdown, setCloseCountdown] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const closeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     const fetchTimer = async (): Promise<void> => {
@@ -47,13 +51,35 @@ export default function EndOfDayRunning(): JSX.Element {
     }
   }, [entry])
 
+  const startCloseCountdown = (): void => {
+    let remaining = CLOSE_DELAY_SECONDS
+    setCloseCountdown(remaining)
+    closeCountdownRef.current = setInterval(() => {
+      remaining -= 1
+      if (remaining <= 0) {
+        if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
+        setCloseCountdown(0)
+        window.jarvest.dismiss()
+      } else {
+        setCloseCountdown(remaining)
+      }
+    }, 1000)
+  }
+
   const handleStopTimer = async (): Promise<void> => {
-    if (!entry || stopping) return
+    if (!entry || stopping || stopped) return
     setStopping(true)
     if (countdownRef.current) clearInterval(countdownRef.current)
     try {
       await window.jarvest.stopTimer(entry.id)
-      window.jarvest.dismiss()
+      setStopping(false)
+      setStopped(true)
+      const withinWorkingHours = await window.jarvest.isWithinWorkingHours()
+      if (!withinWorkingHours) {
+        window.jarvest.showEodSummary()
+      } else {
+        startCloseCountdown()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop timer')
       setStopping(false)
@@ -62,6 +88,7 @@ export default function EndOfDayRunning(): JSX.Element {
 
   const handleDismiss = (): void => {
     if (countdownRef.current) clearInterval(countdownRef.current)
+    if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
     window.jarvest.dismiss()
   }
 
@@ -77,26 +104,28 @@ export default function EndOfDayRunning(): JSX.Element {
       title="Timer Still Running"
       actions={
         <>
+          {closeCountdown !== null ? (
+            <span className="text-xs text-gray-400 mr-auto">
+              Closing in {closeCountdown}s…
+            </span>
+          ) : countdown > 0 && !stopping && (
+            <span className="text-xs text-gray-400 mr-auto">
+              Auto-stop in {countdown}s
+            </span>
+          )}
           <button
             onClick={handleDismiss}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-md transition-colors"
           >
             Dismiss
           </button>
-          <div className="flex flex-col items-center">
-            <button
-              onClick={handleStopTimer}
-              disabled={stopping || !entry}
-              className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
-            >
-              {stopping ? 'Stopping...' : 'Stop Timer'}
-            </button>
-            {countdown > 0 && !stopping && (
-              <span className="text-xs text-gray-400 mt-1">
-                Auto-stop in {countdown}s
-              </span>
-            )}
-          </div>
+          <button
+            onClick={handleStopTimer}
+            disabled={stopping || stopped || !entry}
+            className="px-4 py-1.5 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+          >
+            {stopping ? 'Stopping…' : stopped ? 'Stopped' : 'Stop Timer'}
+          </button>
         </>
       }
     >
