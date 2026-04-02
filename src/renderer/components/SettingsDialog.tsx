@@ -86,7 +86,7 @@ export default function SettingsDialog(): JSX.Element {
       </div>
 
       {/* Form */}
-      <div className="flex-1 overflow-auto px-4 py-3 space-y-4">
+      <div className="flex-1 min-h-0 overflow-auto px-4 py-3 space-y-4">
         {/* Jira Section */}
         <fieldset>
           <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
