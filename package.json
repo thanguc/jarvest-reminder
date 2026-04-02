@@ -1,6 +1,6 @@
 {
   "name": "jarvest-reminder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Jira + Harvest time-tracking reminder desktop app",
   "main": "./out/main/index.js",
   "scripts": {

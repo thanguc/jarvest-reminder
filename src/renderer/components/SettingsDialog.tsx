@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { AppConfig, DEFAULT_CONFIG } from '../../shared/types'
+import { AppConfig, DEFAULT_CONFIG, UpdateInfo } from '../../shared/types'
 import Logo from './Logo'
 
 function SpinnerIcon(): JSX.Element {
@@ -91,6 +91,7 @@ export default function SettingsDialog(): JSX.Element {
   const [authorizingHarvest, setAuthorizingHarvest] = useState(false)
   const [jiraError, setJiraError] = useState('')
   const [harvestError, setHarvestError] = useState('')
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
   const savedConfig = useRef<AppConfig>(DEFAULT_CONFIG)
 
   const isDirty =
@@ -103,6 +104,9 @@ export default function SettingsDialog(): JSX.Element {
       savedConfig.current = c
       setLoading(false)
     })
+    window.jarvest.getUpdateInfo().then(setUpdateInfo)
+    const unsub = window.jarvest.onUpdateStatusChanged(setUpdateInfo)
+    return unsub
   }, [])
 
   const reloadConfig = async (): Promise<void> => {
@@ -287,6 +291,101 @@ export default function SettingsDialog(): JSX.Element {
                 />
               </button>
             </div>
+          </div>
+        </fieldset>
+
+        {/* Update Section */}
+        <fieldset>
+          <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            Updates
+          </legend>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Current version: {updateInfo?.currentVersion ?? '...'}
+              </p>
+            </div>
+            {/* Idle — no update available */}
+            {updateInfo?.status === 'idle' && !updateInfo.availableVersion && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">You are on the latest version.</p>
+                <button
+                  onClick={() => window.jarvest.checkForUpdates()}
+                  className="text-xs text-[#1558BC] hover:underline font-medium shrink-0 ml-2"
+                >
+                  Check for Updates
+                </button>
+              </div>
+            )}
+            {/* Idle — update previously found but not yet downloaded */}
+            {updateInfo?.status === 'idle' && updateInfo.availableVersion && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-700">
+                  Version <span className="font-medium">{updateInfo.availableVersion}</span> is available.
+                </p>
+                <button
+                  onClick={() => window.jarvest.checkForUpdates()}
+                  className="flex items-center gap-1.5 text-xs text-white bg-[#1558BC] px-3 py-1.5 rounded-md hover:bg-[#0f4a9e] transition-colors font-medium shrink-0 ml-2"
+                >
+                  Update
+                </button>
+              </div>
+            )}
+            {/* Checking */}
+            {updateInfo?.status === 'checking' && (
+              <div className="flex items-center gap-2">
+                <SpinnerIcon />
+                <p className="text-sm text-gray-600">Checking for updates...</p>
+              </div>
+            )}
+            {/* Downloading */}
+            {updateInfo?.status === 'downloading' && (
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <SpinnerIcon />
+                  <p className="text-sm text-gray-600">
+                    Downloading {updateInfo.availableVersion ? `v${updateInfo.availableVersion}` : 'update'}...
+                  </p>
+                </div>
+                {updateInfo.downloadProgress > 0 && (
+                  <div className="w-full bg-gray-200 rounded-full h-1.5">
+                    <div
+                      className="bg-[#1558BC] h-1.5 rounded-full transition-all"
+                      style={{ width: `${updateInfo.downloadProgress}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Ready to install */}
+            {updateInfo?.status === 'ready' && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-green-700 font-medium">
+                    Version {updateInfo.availableVersion} is ready to install.
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Restart the app to apply the update.</p>
+                </div>
+                <button
+                  onClick={() => window.jarvest.installUpdate()}
+                  className="flex items-center gap-1.5 text-xs text-white bg-green-600 px-3 py-1.5 rounded-md hover:bg-green-700 transition-colors font-medium shrink-0 ml-2"
+                >
+                  Restart
+                </button>
+              </div>
+            )}
+            {/* Error */}
+            {updateInfo?.status === 'error' && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-red-600">{updateInfo.error || 'Update check failed.'}</p>
+                <button
+                  onClick={() => window.jarvest.checkForUpdates()}
+                  className="text-xs text-[#1558BC] hover:underline font-medium shrink-0 ml-2"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
           </div>
         </fieldset>
 

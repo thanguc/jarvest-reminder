@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { AppConfig, JiraIssue } from '../shared/types'
+import { AppConfig, JiraIssue, UpdateInfo } from '../shared/types'
 
 const api = {
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('get-config'),
@@ -20,7 +20,15 @@ const api = {
   authorizeJira: (): Promise<string | null> => ipcRenderer.invoke('authorize-jira'),
   authorizeHarvest: (): Promise<string | null> => ipcRenderer.invoke('authorize-harvest'),
   disconnectJira: (): Promise<void> => ipcRenderer.invoke('disconnect-jira'),
-  disconnectHarvest: (): Promise<void> => ipcRenderer.invoke('disconnect-harvest')
+  disconnectHarvest: (): Promise<void> => ipcRenderer.invoke('disconnect-harvest'),
+  getUpdateInfo: (): Promise<UpdateInfo> => ipcRenderer.invoke('get-update-info'),
+  checkForUpdates: (): Promise<void> => ipcRenderer.invoke('check-for-updates'),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke('install-update'),
+  onUpdateStatusChanged: (callback: (info: UpdateInfo) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, info: UpdateInfo): void => callback(info)
+    ipcRenderer.on('update-status-changed', handler)
+    return () => ipcRenderer.removeListener('update-status-changed', handler)
+  }
 }
 
 export type JarvestApi = typeof api

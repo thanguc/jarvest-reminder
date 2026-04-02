@@ -14,6 +14,7 @@ import { AppConfig, JiraIssue } from '../shared/types'
 import { isWithinWorkingHoursNow, restartScheduler } from './scheduler'
 import { markEodSummaryShown } from './eod-state'
 import { refreshTrayStatus, forceRefreshTrayStatus } from './tray'
+import { getUpdateInfo, checkForUpdates, installUpdate } from './updater'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('get-config', () => {
@@ -114,5 +115,17 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('disconnect-harvest', () => {
     disconnectHarvest()
     forceRefreshTrayStatus().catch(console.error)
+  })
+
+  ipcMain.handle('get-update-info', () => {
+    return getUpdateInfo()
+  })
+
+  ipcMain.handle('check-for-updates', () => {
+    checkForUpdates()
+  })
+
+  ipcMain.handle('install-update', () => {
+    installUpdate()
   })
 }

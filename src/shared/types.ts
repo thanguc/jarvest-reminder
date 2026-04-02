@@ -101,9 +101,21 @@ export interface JiraIssue {
   }
 }
 
+// ── Update Types ──
+
+export type UpdateStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'error'
+
+export interface UpdateInfo {
+  status: UpdateStatus
+  currentVersion: string
+  availableVersion: string | null
+  downloadProgress: number // 0-100
+  error: string | null
+}
+
 // ── Notification Types ──
 
-export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings'
+export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success'
 
 // ── IPC Channel Types ──
 
@@ -124,4 +136,7 @@ export interface IpcChannels {
   'authorize-harvest': { args: void; result: string | null }
   'disconnect-jira': { args: void; result: void }
   'disconnect-harvest': { args: void; result: void }
+  'get-update-info': { args: void; result: UpdateInfo }
+  'check-for-updates': { args: void; result: void }
+  'install-update': { args: void; result: void }
 }

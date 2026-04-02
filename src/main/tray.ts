@@ -5,7 +5,6 @@ import { isConfigured } from './services/config'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
 import { HarvestTimeEntry } from '../shared/types'
-import { getUpdateStatus, checkForUpdates, installUpdate, onUpdateStatusChange } from './updater'
 
 let tray: Tray | null = null
 let lastRefreshTime = 0
@@ -73,22 +72,10 @@ function applyTrayState(
     ? { label: statusText, enabled: false }
     : { label: statusText, submenu: buildStatusSubmenu(state) }
 
-  const updateStatus = getUpdateStatus()
-  const updateItem: MenuItemConstructorOptions =
-    updateStatus === 'ready'
-      ? { label: 'Restart to Update', click: () => installUpdate() }
-      : updateStatus === 'downloading'
-        ? { label: 'Downloading Update...', enabled: false }
-        : updateStatus === 'checking'
-          ? { label: 'Checking for Updates...', enabled: false }
-          : { label: 'Check for Updates', click: () => checkForUpdates() }
-
   const contextMenu = Menu.buildFromTemplate([
     statusItem,
     { type: 'separator' },
     { label: 'Settings', click: () => showSettings() },
-    { type: 'separator' },
-    updateItem,
     { label: 'Quit', click: () => app.quit() }
   ])
   tray.setContextMenu(contextMenu)
@@ -145,10 +132,6 @@ export function createTray(): Tray {
   tray.on('double-click', () => showSettings())
   tray.on('mouse-enter', () => triggerBackgroundRefresh())
   tray.on('right-click', () => triggerBackgroundRefresh())
-  onUpdateStatusChange(() => {
-    lastRefreshTime = 0
-    doRefresh().catch(console.error)
-  })
   return tray
 }
 

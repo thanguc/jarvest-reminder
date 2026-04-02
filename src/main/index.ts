@@ -5,7 +5,7 @@ import { registerIpcHandlers } from './ipc-handlers'
 import { startScheduler, stopScheduler, restartScheduler } from './scheduler'
 import { getConfig, isConfigured } from './services/config'
 import { showSettings } from './windows'
-import { initUpdater } from './updater'
+import { initUpdater, checkPostUpdateSuccess } from './updater'
 
 // Prevent multiple instances
 const gotLock = app.requestSingleInstanceLock()
@@ -28,6 +28,7 @@ app.whenReady().then(() => {
   registerIpcHandlers()
   createTray()
   initUpdater()
+  checkPostUpdateSuccess()
 
   // Apply startup setting from saved config
   const config = getConfig()

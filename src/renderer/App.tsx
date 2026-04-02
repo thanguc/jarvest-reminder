@@ -3,6 +3,8 @@ import NoTimerNotification from './components/NoTimerNotification'
 import EndOfDayNoTimer from './components/EndOfDayNoTimer'
 import EndOfDayRunning from './components/EndOfDayRunning'
 import SettingsDialog from './components/SettingsDialog'
+import UpdateAvailableNotification from './components/UpdateAvailableNotification'
+import UpdateSuccessNotification from './components/UpdateSuccessNotification'
 
 function getView(): NotificationView {
   const params = new URLSearchParams(window.location.search)
@@ -21,6 +23,10 @@ export default function App(): JSX.Element {
       return <EndOfDayRunning />
     case 'settings':
       return <SettingsDialog />
+    case 'update-available':
+      return <UpdateAvailableNotification />
+    case 'update-success':
+      return <UpdateSuccessNotification />
     default:
       return <NoTimerNotification />
   }
