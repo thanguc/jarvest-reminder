@@ -6,8 +6,8 @@ import { getAppIcon } from './icon'
 
 const NOTIFICATION_WIDTH = 400
 const NOTIFICATION_HEIGHT = 280
-const SETTINGS_WIDTH = 500
-const SETTINGS_HEIGHT = 580
+const SETTINGS_WIDTH = 480
+const SETTINGS_HEIGHT = 640
 const MARGIN = 16
 
 let notificationWindow: BrowserWindow | null = null
