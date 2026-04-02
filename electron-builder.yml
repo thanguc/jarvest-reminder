@@ -1,0 +1,20 @@
+appId: com.jarvest.timer
+productName: Jarvest Timer
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - '!**/.vscode/*'
+  - '!src/*'
+  - '!electron.vite.config.*'
+  - '!{.eslintignore,.eslintrc.*,.prettierrc.*,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+win:
+  target:
+    - nsis
+mac:
+  target:
+    - dmg
+linux:
+  target:
+    - AppImage
