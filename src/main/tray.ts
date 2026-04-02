@@ -5,11 +5,17 @@ import { showSettings } from './windows'
 let tray: Tray | null = null
 
 function createTrayIcon(): nativeImage {
-  // Create a simple 16x16 icon programmatically (green circle for "timer")
+  // Create a simple 16x16 icon programmatically with brand gradient colors
   const size = 16
   const canvas = `
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 16 16">
-      <circle cx="8" cy="8" r="7" fill="#4CAF50" stroke="#2E7D32" stroke-width="1"/>
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#F27A20"/>
+          <stop offset="100%" stop-color="#1558BC"/>
+        </linearGradient>
+      </defs>
+      <circle cx="8" cy="8" r="7" fill="url(#g)" stroke="#0f4a9e" stroke-width="1"/>
       <line x1="8" y1="4" x2="8" y2="8" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
       <line x1="8" y1="8" x2="11" y2="10" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
     </svg>

@@ -1,4 +1,5 @@
 import React from 'react'
+import Logo from './Logo'
 
 interface NotificationShellProps {
   title: string
@@ -18,11 +19,9 @@ export default function NotificationShell({
   return (
     <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#F27A20] to-[#1558BC]">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
+          <Logo size={20} />
           <span className="text-white font-semibold text-sm">{title}</span>
         </div>
         <button
