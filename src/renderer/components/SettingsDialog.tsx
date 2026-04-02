@@ -81,7 +81,7 @@ function ConnectCard({
   )
 }
 
-type Tab = 'general' | 'reminder'
+type Tab = 'general' | 'reminder' | 'about'
 
 export default function SettingsDialog(): JSX.Element {
   const [activeTab, setActiveTab] = useState<Tab>('reminder')
@@ -228,7 +228,7 @@ export default function SettingsDialog(): JSX.Element {
 
       {/* Tabs */}
       <div className="flex border-b border-gray-200">
-        {([['reminder', 'Reminder'], ['general', 'General']] as const).map(([key, label]) => (
+        {([['reminder', 'Reminder'], ['general', 'General'], ['about', 'About']] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
@@ -361,6 +361,22 @@ export default function SettingsDialog(): JSX.Element {
               </div>
             </fieldset>
           </>
+        )}
+
+        {activeTab === 'about' && (
+          <div className="flex flex-col items-center justify-center h-full text-center py-6">
+            <Logo size={48} />
+            <h2 className="text-lg font-semibold text-gray-800 mt-3">Jarvest Reminder</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              v{updateInfo?.currentVersion ?? '...'}
+            </p>
+            <p className="text-sm text-gray-600 mt-3 max-w-xs">
+              A desktop app that reminds you to log your time in Harvest when you have Jira tickets in progress.
+            </p>
+            <p className="text-xs text-gray-400 mt-6">
+              Made by Thang Uong
+            </p>
+          </div>
         )}
 
         {activeTab === 'reminder' && (
