@@ -25,6 +25,7 @@ export function registerIpcHandlers(): void {
     saveConfig(config)
     app.setLoginItemSettings({ openAtLogin: config.runOnStartup })
     restartScheduler()
+    forceRefreshTrayStatus().catch(console.error)
   })
 
   ipcMain.handle('set-run-on-startup', (_event, enabled: boolean) => {

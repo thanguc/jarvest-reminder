@@ -1,7 +1,8 @@
 import { Tray, Menu, MenuItemConstructorOptions, app } from 'electron'
 import { showSettings, showNotification } from './windows'
-import { getTrayIcon } from './icon'
+import { getTrayIcon, getTrayIconWithDot, getMenuDot } from './icon'
 import { isConfigured } from './services/config'
+import { isWithinWorkingHoursNow, isPastWorkEndTime } from './scheduler'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
 import { HarvestTimeEntry } from '../shared/types'
@@ -12,6 +13,33 @@ const REFRESH_COOLDOWN_MS = 60 * 1000
 
 // Kept across refreshes so the Stop Timer submenu action can use it
 let currentRunningTimerId: number | null = null
+
+let blinkInterval: ReturnType<typeof setInterval> | null = null
+let blinkVisible = true
+let blinkColor: string | null = null
+
+function startBlink(color: string): void {
+  if (blinkInterval && blinkColor === color) return
+  stopBlink()
+  blinkColor = color
+  blinkVisible = true
+  tray?.setImage(getTrayIconWithDot(color))
+  blinkInterval = setInterval(() => {
+    if (!tray) return
+    blinkVisible = !blinkVisible
+    tray.setImage(blinkVisible ? getTrayIconWithDot(color) : getTrayIcon())
+  }, 800)
+}
+
+function stopBlink(): void {
+  if (blinkInterval) {
+    clearInterval(blinkInterval)
+    blinkInterval = null
+  }
+  blinkColor = null
+  blinkVisible = true
+  tray?.setImage(getTrayIcon())
+}
 
 function formatHours(hours: number): string {
   const h = Math.floor(hours)
@@ -68,9 +96,24 @@ function applyTrayState(
 
   tray.setToolTip(`Jarvest Reminder\n${statusText}`)
 
+  const inWorkingHours = isWithinWorkingHoursNow()
+  const isWarning = (state === 'idle' && inWorkingHours)
+    || (state === 'running' && !inWorkingHours && isPastWorkEndTime())
+
+  const dotColor = state === 'not-authorized' ? '#C0C0C0'
+    : isWarning ? '#FF0000'
+    : state === 'running' ? '#F27A20'
+    : inWorkingHours ? '#FFD700' : '#1558BC'
+
+  if (state === 'running' || isWarning) {
+    startBlink(dotColor)
+  } else {
+    stopBlink()
+  }
+
   const statusItem: MenuItemConstructorOptions = state === 'checking'
     ? { label: statusText, enabled: false }
-    : { label: statusText, submenu: buildStatusSubmenu(state) }
+    : { label: statusText, icon: getMenuDot(dotColor), submenu: buildStatusSubmenu(state) }
 
   const contextMenu = Menu.buildFromTemplate([
     statusItem,
@@ -136,6 +179,7 @@ export function createTray(): Tray {
 }
 
 export function destroyTray(): void {
+  stopBlink()
   if (tray) {
     tray.destroy()
     tray = null

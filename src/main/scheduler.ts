@@ -24,6 +24,17 @@ export function isWithinWorkingHoursNow(): boolean {
   return currentMinutes >= startMinutes && currentMinutes < endMinutes
 }
 
+/** Returns true when the current time is past the configured work end time on a work day. */
+export function isPastWorkEndTime(): boolean {
+  const config = getConfig()
+  const now = new Date()
+  const day = now.getDay()
+  if (!config.schedule.workDays.includes(day)) return false
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const endMinutes = config.schedule.workEndHour * 60 + config.schedule.workEndMinute
+  return currentMinutes >= endMinutes
+}
+
 function msUntilTime(hour: number, minute: number): number {
   const now = new Date()
   const target = new Date()
