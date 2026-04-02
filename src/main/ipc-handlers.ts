@@ -11,7 +11,9 @@ import { getInProgressTickets } from './services/jira'
 import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
 import { closeNotification, closeSettings, showNotification, showSettings } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
-import { isWithinWorkingHoursNow, markEodSummaryShown, restartScheduler, scheduleEodRecheck } from './scheduler'
+import { isWithinWorkingHoursNow, restartScheduler } from './scheduler'
+import { markEodSummaryShown } from './eod-state'
+import { refreshTrayStatus, forceRefreshTrayStatus } from './tray'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('get-config', () => {
@@ -37,11 +39,21 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('start-timer-for-ticket', async (_event, issue: JiraIssue) => {
-    return await startTimerForTicket(issue)
+    const result = await startTimerForTicket(issue)
+    forceRefreshTrayStatus().catch(console.error)
+    return result
   })
 
   ipcMain.handle('stop-timer', async (_event, { entryId }: { entryId: number }) => {
     await stopTimer(entryId)
+    forceRefreshTrayStatus().catch(console.error)
+    if (!isWithinWorkingHoursNow()) {
+      // Let the IPC response reach the renderer before replacing the window
+      setTimeout(() => {
+        markEodSummaryShown()
+        showNotification('eod-summary')
+      }, 300)
+    }
   })
 
   ipcMain.handle('dismiss', () => {
@@ -54,7 +66,7 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('reschedule-eod-check', () => {
-    scheduleEodRecheck()
+    // EOD rechecks are now scheduled automatically at fixed intervals — no-op
   })
 
   ipcMain.handle('show-eod-summary', () => {
@@ -77,6 +89,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('authorize-jira', async () => {
     try {
       await authorizeJira()
+      refreshTrayStatus().catch(console.error)
       return null
     } catch (e) {
       return (e as Error).message
@@ -86,6 +99,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('authorize-harvest', async () => {
     try {
       await authorizeHarvest()
+      refreshTrayStatus().catch(console.error)
       return null
     } catch (e) {
       return (e as Error).message
@@ -94,9 +108,11 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('disconnect-jira', () => {
     disconnectJira()
+    refreshTrayStatus().catch(console.error)
   })
 
   ipcMain.handle('disconnect-harvest', () => {
     disconnectHarvest()
+    refreshTrayStatus().catch(console.error)
   })
 }

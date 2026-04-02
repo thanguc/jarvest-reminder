@@ -1,25 +1,14 @@
 import { getConfig, isConfigured } from './services/config'
 import { getRunningTimer } from './services/harvest'
 import { showNotification, isNotificationVisible } from './windows'
+import { refreshTrayStatus } from './tray'
+import { isEodSummaryShownToday, markEodSummaryShown } from './eod-state'
+
+export { markEodSummaryShown }
 
 let checkTimeout: ReturnType<typeof setTimeout> | null = null
 let checkInterval: ReturnType<typeof setInterval> | null = null
-let eodTimeout: ReturnType<typeof setTimeout> | null = null
-let isEndOfDayMode = false
-let eodSummaryShownDate: string | null = null
-
-function getTodayStr(): string {
-  return new Date().toISOString().split('T')[0]
-}
-
-function isEodSummaryShownToday(): boolean {
-  return eodSummaryShownDate === getTodayStr()
-}
-
-export function markEodSummaryShown(): void {
-  eodSummaryShownDate = getTodayStr()
-  isEndOfDayMode = false
-}
+let eodTimeouts: ReturnType<typeof setTimeout>[] = []
 
 export function isWithinWorkingHoursNow(): boolean {
   const config = getConfig()
@@ -40,56 +29,60 @@ function msUntilTime(hour: number, minute: number): number {
   return target.getTime() - now.getTime()
 }
 
-async function performCheck(): Promise<void> {
-  if (!isConfigured()) return
-  if (isNotificationVisible()) return
-  if (isEodSummaryShownToday()) return
+function timestamp(): string {
+  return new Date().toLocaleTimeString()
+}
+
+async function performEndOfDayCheck(): Promise<void> {
+  console.log(`[scheduler] EOD check at ${timestamp()}`)
+  if (!isConfigured()) { console.log('[scheduler] skipped — not configured'); return }
+  if (isNotificationVisible()) { console.log('[scheduler] skipped — notification visible'); return }
 
   try {
-    if (isEndOfDayMode) {
-      await performEndOfDayCheck()
-      return
+    const runningTimer = await getRunningTimer()
+    if (runningTimer) {
+      console.log(`[scheduler] timer running (${runningTimer.id}) — showing eod-running`)
+      showNotification('eod-running')
+    } else if (!isEodSummaryShownToday()) {
+      console.log('[scheduler] no timer — showing eod-summary')
+      markEodSummaryShown()
+      showNotification('eod-summary')
+    } else {
+      console.log('[scheduler] no timer — EOD summary already shown, skipping')
     }
+  } catch (error) {
+    console.error('[scheduler] EOD check failed:', error)
+  }
+}
 
+async function performCheck(): Promise<void> {
+  console.log(`[scheduler] work-hours check at ${timestamp()}`)
+  if (!isConfigured()) { console.log('[scheduler] skipped — not configured'); return }
+  if (isNotificationVisible()) { console.log('[scheduler] skipped — notification visible'); return }
+
+  try {
     if (!isWithinWorkingHoursNow()) {
-      // Outside working hours: check if a timer was left running
+      // Startup check fired outside working hours — treat as an EOD check
       const config = getConfig()
       const now = new Date()
       if (config.schedule.workDays.includes(now.getDay())) {
-        const runningTimer = await getRunningTimer()
-        if (runningTimer) {
-          isEndOfDayMode = true
-          showNotification('eod-running')
-        }
+        console.log('[scheduler] outside working hours — delegating to EOD check')
+        await performEndOfDayCheck()
       }
       return
     }
 
     const runningTimer = await getRunningTimer()
     if (!runningTimer) {
+      console.log('[scheduler] no timer — showing no-timer')
       showNotification('no-timer')
-    }
-  } catch (error) {
-    console.error('Check failed:', error)
-  }
-}
-
-async function performEndOfDayCheck(): Promise<void> {
-  try {
-    const runningTimer = await getRunningTimer()
-
-    if (runningTimer) {
-      isEndOfDayMode = true
-      showNotification('eod-running')
     } else {
-      if (!isEodSummaryShownToday()) {
-        markEodSummaryShown()
-        showNotification('eod-summary')
-      }
+      console.log(`[scheduler] timer running (${runningTimer.id}) — no action`)
     }
   } catch (error) {
-    console.error('End-of-day check failed:', error)
+    console.error('[scheduler] check failed:', error)
   }
+  refreshTrayStatus().catch(console.error)
 }
 
 export function startScheduler(): void {
@@ -98,7 +91,7 @@ export function startScheduler(): void {
   const config = getConfig()
   const { workStartHour, workStartMinute, workEndHour, workEndMinute, workDays, checkPeriodMinutes } = config.schedule
 
-  // Startup check
+  // Startup check after 5s (handles both in-hours and outside-hours cases)
   setTimeout(() => performCheck(), 5000)
 
   const now = new Date()
@@ -108,50 +101,61 @@ export function startScheduler(): void {
   const startMinutes = workStartHour * 60 + workStartMinute
   const endMinutes = workEndHour * 60 + workEndMinute
 
-  // Schedule EOD check at exactly the end time
+  // ── Working-hours interval checks ──────────────────────────────────────────
+  // Aligned to workStart + multiples of checkPeriod, e.g. 8:30, 9:30, 10:30…
   if (currentMinutes < endMinutes) {
-    eodTimeout = setTimeout(async () => {
-      if (!isNotificationVisible() && !isEodSummaryShownToday()) {
-        await performEndOfDayCheck()
-      }
-    }, msUntilTime(workEndHour, workEndMinute))
-  }
-
-  // Find the next schedule-aligned check time
-  // e.g. work starts 8:30, period 30min → checks at 8:30, 9:00, 9:30...
-  // If app launches at 8:40, next aligned check is 9:00
-  let nextCheckMinutes: number
-  if (currentMinutes < startMinutes) {
-    nextCheckMinutes = startMinutes
-  } else {
-    const minutesSinceStart = currentMinutes - startMinutes
-    const periodsElapsed = Math.floor(minutesSinceStart / checkPeriodMinutes)
-    nextCheckMinutes = startMinutes + (periodsElapsed + 1) * checkPeriodMinutes
-  }
-
-  if (nextCheckMinutes >= endMinutes) return // no more checks today before EOD
-
-  const nextCheckHour = Math.floor(nextCheckMinutes / 60)
-  const nextCheckMinute = nextCheckMinutes % 60
-
-  // Wait until the next aligned time, then run on a fixed interval
-  checkTimeout = setTimeout(() => {
-    const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
-    if (nowMins < endMinutes) {
-      performCheck()
+    let nextCheckMinutes: number
+    if (currentMinutes < startMinutes) {
+      nextCheckMinutes = startMinutes
+    } else {
+      const minutesSinceStart = currentMinutes - startMinutes
+      const periodsElapsed = Math.floor(minutesSinceStart / checkPeriodMinutes)
+      nextCheckMinutes = startMinutes + (periodsElapsed + 1) * checkPeriodMinutes
     }
 
-    const intervalMs = checkPeriodMinutes * 60 * 1000
-    checkInterval = setInterval(() => {
-      const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
-      if (nowMins >= endMinutes) {
-        clearInterval(checkInterval!)
-        checkInterval = null
-        return
-      }
-      performCheck()
-    }, intervalMs)
-  }, msUntilTime(nextCheckHour, nextCheckMinute))
+    if (nextCheckMinutes < endMinutes) {
+      const nextCheckHour = Math.floor(nextCheckMinutes / 60)
+      const nextCheckMinute = nextCheckMinutes % 60
+
+      checkTimeout = setTimeout(() => {
+        const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
+        if (nowMins < endMinutes) performCheck()
+
+        const intervalMs = checkPeriodMinutes * 60 * 1000
+        checkInterval = setInterval(() => {
+          const nowMins = new Date().getHours() * 60 + new Date().getMinutes()
+          if (nowMins >= endMinutes) {
+            clearInterval(checkInterval!)
+            checkInterval = null
+            return
+          }
+          performCheck()
+        }, intervalMs)
+      }, msUntilTime(nextCheckHour, nextCheckMinute))
+    }
+  }
+
+  // ── EOD interval checks ────────────────────────────────────────────────────
+  // Starts at workEnd, repeats every checkPeriod until midnight.
+  // e.g. workEnd=17:45, period=60 → checks at 17:45, 18:45, …, 23:45
+  const MIDNIGHT_MINUTES = 24 * 60
+  const scheduledEodTimes: string[] = []
+  let eodCheckMinutes = endMinutes
+  while (eodCheckMinutes < MIDNIGHT_MINUTES) {
+    const eodHour = Math.floor(eodCheckMinutes / 60)
+    const eodMinute = eodCheckMinutes % 60
+    const msUntil = msUntilTime(eodHour, eodMinute)
+    if (msUntil > 0) {
+      scheduledEodTimes.push(`${String(eodHour).padStart(2, '0')}:${String(eodMinute).padStart(2, '0')}`)
+      eodTimeouts.push(
+        setTimeout(async () => {
+          await performEndOfDayCheck()
+        }, msUntil)
+      )
+    }
+    eodCheckMinutes += checkPeriodMinutes
+  }
+  console.log(`[scheduler] EOD checks scheduled at: ${scheduledEodTimes.join(', ') || 'none (all in the past)'}`)
 }
 
 export function stopScheduler(): void {
@@ -163,29 +167,11 @@ export function stopScheduler(): void {
     clearInterval(checkInterval)
     checkInterval = null
   }
-  if (eodTimeout) {
-    clearTimeout(eodTimeout)
-    eodTimeout = null
-  }
-  isEndOfDayMode = false
+  eodTimeouts.forEach(t => clearTimeout(t))
+  eodTimeouts = []
 }
 
 export function restartScheduler(): void {
   stopScheduler()
   startScheduler()
-}
-
-export function triggerEndOfDayRecheck(): void {
-  isEndOfDayMode = true
-}
-
-export function scheduleEodRecheck(): void {
-  const config = getConfig()
-  const delayMs = config.schedule.checkPeriodMinutes * 60 * 1000
-  if (eodTimeout) clearTimeout(eodTimeout)
-  eodTimeout = setTimeout(async () => {
-    if (!isNotificationVisible() && !isEodSummaryShownToday()) {
-      await performEndOfDayCheck()
-    }
-  }, delayMs)
 }

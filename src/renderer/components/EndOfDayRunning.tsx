@@ -75,11 +75,10 @@ export default function EndOfDayRunning(): JSX.Element {
       setStopping(false)
       setStopped(true)
       const withinWorkingHours = await window.jarvest.isWithinWorkingHours()
-      if (!withinWorkingHours) {
-        window.jarvest.showEodSummary()
-      } else {
+      if (withinWorkingHours) {
         startCloseCountdown()
       }
+      // Outside working hours: main process will show eod-summary after a short delay
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop timer')
       setStopping(false)
@@ -89,9 +88,6 @@ export default function EndOfDayRunning(): JSX.Element {
   const handleDismiss = (): void => {
     if (countdownRef.current) clearInterval(countdownRef.current)
     if (closeCountdownRef.current) clearInterval(closeCountdownRef.current)
-    if (entry && !stopped) {
-      window.jarvest.rescheduleEodCheck()
-    }
     window.jarvest.dismiss()
   }
 

@@ -82,6 +82,7 @@ export default function NoTimerNotification(): JSX.Element {
   const [countdown, setCountdown] = useState(AUTO_START_SECONDS)
   const [closeCountdown, setCloseCountdown] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [withinWorkingHours, setWithinWorkingHours] = useState(false)
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const closeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const selectedIndexRef = useRef(0)
@@ -103,11 +104,12 @@ export default function NoTimerNotification(): JSX.Element {
 
   useEffect(() => {
     fetchTickets()
+    window.jarvest.isWithinWorkingHours().then(setWithinWorkingHours)
   }, [])
 
-  // Start auto-start countdown when tickets load
+  // Start auto-start countdown only during working hours
   useEffect(() => {
-    if (tickets.length === 0) return
+    if (tickets.length === 0 || !withinWorkingHours) return
 
     let remaining = AUTO_START_SECONDS
     setCountdown(remaining)
@@ -125,7 +127,7 @@ export default function NoTimerNotification(): JSX.Element {
     return () => {
       if (countdownRef.current) clearInterval(countdownRef.current)
     }
-  }, [tickets])
+  }, [tickets, withinWorkingHours])
 
   const startCloseCountdown = (): void => {
     let remaining = CLOSE_DELAY_SECONDS
@@ -186,7 +188,7 @@ export default function NoTimerNotification(): JSX.Element {
             <span className="text-xs text-gray-400 mr-auto">
               Closing in {closeCountdown}s…
             </span>
-          ) : hasTickets && !started && countdown > 0 && (
+          ) : hasTickets && !started && countdown > 0 && withinWorkingHours && (
             <span className="text-xs text-gray-400 mr-auto">
               Auto-start in {countdown}s
             </span>
