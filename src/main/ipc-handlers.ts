@@ -5,10 +5,10 @@ import {
   getDailyHours,
   startTimerForTicket,
   stopTimer,
-  getProjectAssignments,
-  validateHarvestConfig
+  getProjectAssignments
 } from './services/harvest'
-import { getInProgressTickets, validateJiraConfig } from './services/jira'
+import { getInProgressTickets } from './services/jira'
+import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
 import { closeNotification, closeSettings, showSettings } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
 
@@ -58,21 +58,29 @@ export function registerIpcHandlers(): void {
     return await getProjectAssignments()
   })
 
-  ipcMain.handle('validate-jira', async (_event, config: AppConfig) => {
+  ipcMain.handle('authorize-jira', async () => {
     try {
-      await validateJiraConfig(config)
+      await authorizeJira()
       return null
     } catch (e) {
       return (e as Error).message
     }
   })
 
-  ipcMain.handle('validate-harvest', async (_event, config: AppConfig) => {
+  ipcMain.handle('authorize-harvest', async () => {
     try {
-      await validateHarvestConfig(config)
+      await authorizeHarvest()
       return null
     } catch (e) {
       return (e as Error).message
     }
+  })
+
+  ipcMain.handle('disconnect-jira', () => {
+    disconnectJira()
+  })
+
+  ipcMain.handle('disconnect-harvest', () => {
+    disconnectHarvest()
   })
 }

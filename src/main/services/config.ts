@@ -18,9 +18,8 @@ export function saveConfig(config: AppConfig): void {
 export function isConfigured(): boolean {
   const config = getConfig()
   return !!(
-    config.jira.email &&
-    config.jira.apiToken &&
-    config.jira.domain &&
+    config.jira.accessToken &&
+    config.jira.cloudId &&
     config.harvest.accessToken &&
     config.harvest.accountId
   )

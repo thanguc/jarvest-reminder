@@ -2,13 +2,19 @@
 
 export interface AppConfig {
   jira: {
-    email: string
-    apiToken: string
-    domain: string // e.g. "mycompany" for mycompany.atlassian.net
+    accessToken: string
+    refreshToken: string
+    tokenExpiresAt: number  // Unix timestamp ms, 0 if unknown
+    cloudId: string         // e.g. "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    domain: string          // e.g. "mycompany" (for browse URLs)
+    userDisplayName: string
   }
   harvest: {
     accessToken: string
+    refreshToken: string
+    tokenExpiresAt: number  // Unix timestamp ms, 0 if unknown
     accountId: string
+    userDisplayName: string
   }
   schedule: {
     workStartHour: number // 0-23, default 9
@@ -21,8 +27,8 @@ export interface AppConfig {
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
-  jira: { email: '', apiToken: '', domain: '' },
-  harvest: { accessToken: '', accountId: '' },
+  jira: { accessToken: '', refreshToken: '', tokenExpiresAt: 0, cloudId: '', domain: '', userDisplayName: '' },
+  harvest: { accessToken: '', refreshToken: '', tokenExpiresAt: 0, accountId: '', userDisplayName: '' },
   schedule: {
     workStartHour: 9,
     workStartMinute: 0,
@@ -111,6 +117,8 @@ export interface IpcChannels {
   'open-external': { args: { url: string }; result: void }
   'open-settings': { args: void; result: void }
   'get-harvest-projects': { args: void; result: HarvestProjectAssignment[] }
-  'validate-jira': { args: AppConfig; result: string | null }
-  'validate-harvest': { args: AppConfig; result: string | null }
+  'authorize-jira': { args: void; result: string | null }
+  'authorize-harvest': { args: void; result: string | null }
+  'disconnect-jira': { args: void; result: void }
+  'disconnect-harvest': { args: void; result: void }
 }
