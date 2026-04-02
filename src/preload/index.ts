@@ -13,7 +13,9 @@ const api = {
   dismiss: () => ipcRenderer.invoke('dismiss'),
   openExternal: (url: string) => ipcRenderer.invoke('open-external', { url }),
   openSettings: () => ipcRenderer.invoke('open-settings'),
-  getHarvestProjects: () => ipcRenderer.invoke('get-harvest-projects')
+  getHarvestProjects: () => ipcRenderer.invoke('get-harvest-projects'),
+  validateJira: (config: AppConfig): Promise<string | null> => ipcRenderer.invoke('validate-jira', config),
+  validateHarvest: (config: AppConfig): Promise<string | null> => ipcRenderer.invoke('validate-harvest', config)
 }
 
 export type JarvestApi = typeof api

@@ -111,4 +111,6 @@ export interface IpcChannels {
   'open-external': { args: { url: string }; result: void }
   'open-settings': { args: void; result: void }
   'get-harvest-projects': { args: void; result: HarvestProjectAssignment[] }
+  'validate-jira': { args: AppConfig; result: string | null }
+  'validate-harvest': { args: AppConfig; result: string | null }
 }
