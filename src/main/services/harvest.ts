@@ -1,6 +1,7 @@
 import { net } from 'electron'
 import { getConfig } from './config'
 import {
+  AppConfig,
   HarvestTimeEntry,
   HarvestPlatformResult,
   HarvestProjectAssignment,
@@ -26,6 +27,18 @@ async function harvestFetch(path: string, options: RequestInit = {}): Promise<Re
     ...options,
     headers: { ...headers, ...(options.headers as Record<string, string>) }
   })
+}
+
+export async function validateHarvestConfig(config: AppConfig): Promise<void> {
+  const headers = {
+    Authorization: `Bearer ${config.harvest.accessToken}`,
+    'Harvest-Account-Id': config.harvest.accountId,
+    'User-Agent': 'JarvestTimer',
+    'Content-Type': 'application/json'
+  }
+  const res = await net.fetch(`${BASE_URL}/users/me`, { headers })
+  if (res.status === 401) throw new Error('Invalid access token or account ID')
+  if (!res.ok) throw new Error(`Harvest error: ${res.status}`)
 }
 
 export async function getRunningTimer(): Promise<HarvestTimeEntry | null> {

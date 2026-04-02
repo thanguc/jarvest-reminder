@@ -21,6 +21,7 @@ export function createTray(): Tray {
   ])
 
   tray.setContextMenu(contextMenu)
+  tray.on('double-click', () => showSettings())
   return tray
 }
 
