@@ -93,27 +93,45 @@ export default function SettingsDialog(): JSX.Element {
             Jira
           </legend>
           <div className="space-y-2">
-            <input
-              type="text"
-              placeholder="Domain (e.g. mycompany)"
-              value={config.jira.domain}
-              onChange={(e) => updateJira('domain', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
-            />
-            <input
-              type="email"
-              placeholder="Email"
-              value={config.jira.email}
-              onChange={(e) => updateJira('email', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
-            />
-            <input
-              type="password"
-              placeholder="API Token"
-              value={config.jira.apiToken}
-              onChange={(e) => updateJira('apiToken', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
-            />
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Domain</label>
+              <input
+                type="text"
+                placeholder="e.g. partsdb"
+                value={config.jira.domain}
+                onChange={(e) => updateJira('domain', e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Email</label>
+              <input
+                type="email"
+                placeholder="e.g. you@company.com"
+                value={config.jira.email}
+                onChange={(e) => updateJira('email', e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
+              />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-xs text-gray-500">API Token</label>
+                <button
+                  type="button"
+                  onClick={() => window.jarvest.openExternal('https://id.atlassian.com/manage-profile/security/api-tokens')}
+                  className="text-[10px] text-[#1558BC] hover:underline"
+                >
+                  Get token
+                </button>
+              </div>
+              <input
+                type="password"
+                placeholder="Paste your Jira API token"
+                value={config.jira.apiToken}
+                onChange={(e) => updateJira('apiToken', e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
+              />
+            </div>
           </div>
         </fieldset>
 
@@ -123,20 +141,35 @@ export default function SettingsDialog(): JSX.Element {
             Harvest
           </legend>
           <div className="space-y-2">
-            <input
-              type="password"
-              placeholder="Access Token"
-              value={config.harvest.accessToken}
-              onChange={(e) => updateHarvest('accessToken', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
-            />
-            <input
-              type="text"
-              placeholder="Account ID"
-              value={config.harvest.accountId}
-              onChange={(e) => updateHarvest('accountId', e.target.value)}
-              className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
-            />
+            <div>
+              <div className="flex items-center justify-between mb-0.5">
+                <label className="text-xs text-gray-500">Access Token</label>
+                <button
+                  type="button"
+                  onClick={() => window.jarvest.openExternal('https://id.getharvest.com/developers')}
+                  className="text-[10px] text-[#F27A20] hover:underline"
+                >
+                  Get token
+                </button>
+              </div>
+              <input
+                type="password"
+                placeholder="Paste your Harvest access token"
+                value={config.harvest.accessToken}
+                onChange={(e) => updateHarvest('accessToken', e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-0.5">Account ID</label>
+              <input
+                type="text"
+                placeholder="e.g. 1234567"
+                value={config.harvest.accountId}
+                onChange={(e) => updateHarvest('accountId', e.target.value)}
+                className="w-full text-sm border border-gray-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#1558BC] focus:border-[#1558BC]"
+              />
+            </div>
           </div>
         </fieldset>
 
