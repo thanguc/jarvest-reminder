@@ -8,7 +8,7 @@ import {
   getProjectAssignments
 } from './services/harvest'
 import { getInProgressTickets } from './services/jira'
-import { closeNotification, showSettings } from './windows'
+import { closeNotification, closeSettings, showSettings } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
 
 export function registerIpcHandlers(): void {
@@ -42,6 +42,7 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('dismiss', () => {
     closeNotification()
+    closeSettings()
   })
 
   ipcMain.handle('open-external', async (_event, { url }: { url: string }) => {

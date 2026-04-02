@@ -108,6 +108,13 @@ export function closeNotification(): void {
   }
 }
 
+export function closeSettings(): void {
+  if (settingsWindow && !settingsWindow.isDestroyed()) {
+    settingsWindow.close()
+    settingsWindow = null
+  }
+}
+
 export function isNotificationVisible(): boolean {
   return notificationWindow !== null && !notificationWindow.isDestroyed()
 }
