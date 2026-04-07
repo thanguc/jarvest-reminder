@@ -103,6 +103,7 @@ export default function SettingsDialog(): JSX.Element {
   const [jiraError, setJiraError] = useState('')
   const [harvestError, setHarvestError] = useState('')
   const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null)
+  const [releaseNotes, setReleaseNotes] = useState<{ version: string; body: string } | null>(null)
   const savedConfig = useRef<AppConfig>(DEFAULT_CONFIG)
 
   const isDirty =
@@ -115,6 +116,7 @@ export default function SettingsDialog(): JSX.Element {
       setLoading(false)
     })
     window.jarvest.getUpdateInfo().then(setUpdateInfo)
+    window.jarvest.getReleaseNotes().then(setReleaseNotes)
     const unsub = window.jarvest.onUpdateStatusChanged(setUpdateInfo)
     return unsub
   }, [])
@@ -302,7 +304,7 @@ export default function SettingsDialog(): JSX.Element {
               <legend className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                 Updates
               </legend>
-              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 mr-3">
                     <p className="text-sm font-medium text-gray-700">Check for updates</p>
@@ -372,6 +374,24 @@ export default function SettingsDialog(): JSX.Element {
                     )}
                   </div>
                 </div>
+                {releaseNotes && (
+                  <details className="border-t border-gray-200 pt-2.5 group">
+                    <summary className="flex items-center gap-1.5 cursor-pointer list-none">
+                      <p className="text-xs font-medium text-gray-700">What's new in {releaseNotes.version}</p>
+                      <svg
+                        className="w-3.5 h-3.5 text-gray-400 shrink-0 transition-transform group-open:rotate-90"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </summary>
+                    <div className="max-h-36 overflow-auto mt-1.5">
+                      <pre className="text-xs text-gray-500 whitespace-pre-wrap font-sans leading-relaxed">
+                        {releaseNotes.body.trim()}
+                      </pre>
+                    </div>
+                  </details>
+                )}
               </div>
             </fieldset>
           </>

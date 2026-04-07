@@ -1,10 +1,11 @@
-import { Tray, Menu, MenuItemConstructorOptions, app } from 'electron'
+import { Tray, Menu, MenuItemConstructorOptions, app, shell } from 'electron'
 import { showSettings, showNotification } from './windows'
 import { getTrayIcon, getTrayIconWithDot, getMenuDot } from './icon'
-import { isConfigured } from './services/config'
+import { isConfigured, getConfig } from './services/config'
 import { isWithinWorkingHoursNow, isPastWorkEndTime } from './scheduler'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
+import { getBrowseUrl } from './services/jira'
 import { HarvestTimeEntry } from '../shared/types'
 
 let tray: Tray | null = null
@@ -48,16 +49,24 @@ function formatHours(hours: number): string {
   return `${h}h ${m}m`
 }
 
-function extractTicketKey(entry: HarvestTimeEntry): string {
+function extractTicketKey(entry: HarvestTimeEntry): string | null {
   if (entry.notes) {
     const match = entry.notes.match(/^([A-Z]+-\d+):/)
     if (match) return match[1]
   }
-  return 'unknown'
+  return null
+}
+
+function buildRunningLabel(entry: HarvestTimeEntry): string {
+  const key = extractTicketKey(entry)
+  if (key) return `Running on ${key}`
+  if (entry.notes) return `A manual timer is running (${entry.notes})`
+  return 'A manual timer is running'
 }
 
 function buildStatusSubmenu(
-  state: 'not-authorized' | 'idle' | 'running'
+  state: 'not-authorized' | 'idle' | 'running',
+  ticketKey: string | null
 ): MenuItemConstructorOptions[] {
   if (state === 'not-authorized') {
     return [{ label: 'Authorize', click: () => showSettings() }]
@@ -65,14 +74,19 @@ function buildStatusSubmenu(
   if (state === 'idle') {
     return [{ label: 'Start Timer', click: () => showNotification('no-timer') }]
   }
-  return [{
+  const items: MenuItemConstructorOptions[] = []
+  if (ticketKey) {
+    items.push({ label: `Browse ${ticketKey}`, click: () => shell.openExternal(getBrowseUrl(ticketKey)) })
+  }
+  items.push({
     label: 'Stop Timer',
     click: () => {
       if (currentRunningTimerId !== null) {
         handleTrayStopTimer(currentRunningTimerId)
       }
     }
-  }]
+  })
+  return items
 }
 
 async function handleTrayStopTimer(entryId: number): Promise<void> {
@@ -90,11 +104,16 @@ async function handleTrayStopTimer(entryId: number): Promise<void> {
 
 function applyTrayState(
   statusText: string,
-  state: 'checking' | 'not-authorized' | 'idle' | 'running'
+  hoursText: string | null,
+  state: 'checking' | 'not-authorized' | 'idle' | 'running',
+  ticketKey: string | null = null
 ): void {
   if (!tray) return
 
-  tray.setToolTip(`Jarvest Reminder\n${statusText}`)
+  const tooltip = hoursText
+    ? `Jarvest Reminder\n${statusText}\n${hoursText}`
+    : `Jarvest Reminder\n${statusText}`
+  tray.setToolTip(tooltip)
 
   const inWorkingHours = isWithinWorkingHoursNow()
   const isWarning = (state === 'idle' && inWorkingHours)
@@ -113,14 +132,23 @@ function applyTrayState(
 
   const statusItem: MenuItemConstructorOptions = state === 'checking'
     ? { label: statusText, enabled: false }
-    : { label: statusText, icon: getMenuDot(dotColor), submenu: buildStatusSubmenu(state) }
+    : { label: statusText, icon: getMenuDot(dotColor), submenu: buildStatusSubmenu(state, ticketKey) }
 
-  const contextMenu = Menu.buildFromTemplate([
-    statusItem,
-    { type: 'separator' },
+  const isAuthorized = state !== 'checking' && state !== 'not-authorized'
+  const menuItems: MenuItemConstructorOptions[] = [statusItem]
+  if (hoursText) menuItems.push({ label: hoursText, enabled: false })
+  menuItems.push({ type: 'separator' })
+  if (isAuthorized) {
+    menuItems.push({ label: 'Go to Harvest', click: () => {
+      const baseUrl = getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
+      shell.openExternal(`${baseUrl}/time`)
+    } })
+  }
+  menuItems.push(
     { label: 'Settings', click: () => showSettings() },
     { label: 'Quit', click: () => app.quit() }
-  ])
+  )
+  const contextMenu = Menu.buildFromTemplate(menuItems)
   tray.setContextMenu(contextMenu)
 }
 
@@ -129,7 +157,7 @@ async function doRefresh(): Promise<void> {
   lastRefreshTime = Date.now()
   if (!isConfigured()) {
     currentRunningTimerId = null
-    applyTrayState('Idle (not authorized)', 'not-authorized')
+    applyTrayState('Idle (not authorized)', null, 'not-authorized')
     return
   }
   try {
@@ -143,10 +171,10 @@ async function doRefresh(): Promise<void> {
     if (runningTimer) {
       currentRunningTimerId = runningTimer.id
       const ticketKey = extractTicketKey(runningTimer)
-      applyTrayState(`Running on ${ticketKey} (${hoursText} spent today)`, 'running')
+      applyTrayState(buildRunningLabel(runningTimer), `${hoursText} spent today`, 'running', ticketKey)
     } else {
       currentRunningTimerId = null
-      applyTrayState(`Idle (${hoursText} spent today)`, 'idle')
+      applyTrayState('Idle', `${hoursText} spent today`, 'idle')
     }
   } catch {
     // silently ignore — keep existing status
@@ -170,7 +198,7 @@ function triggerBackgroundRefresh(): void {
 
 export function createTray(): Tray {
   tray = new Tray(getTrayIcon())
-  applyTrayState('Idle (checking...)', 'checking')
+  applyTrayState('Idle (checking...)', null, 'checking')
   refreshTrayStatus().catch(console.error)
   tray.on('double-click', () => showSettings())
   tray.on('mouse-enter', () => triggerBackgroundRefresh())

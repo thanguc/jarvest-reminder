@@ -15,6 +15,7 @@ export interface AppConfig {
     tokenExpiresAt: number  // Unix timestamp ms, 0 if unknown
     accountId: string
     userDisplayName: string
+    baseUrl: string         // e.g. "https://emotiv.harvestapp.com"
   }
   schedule: {
     workStartHour: number // 0-23, default 9
@@ -29,7 +30,7 @@ export interface AppConfig {
 
 export const DEFAULT_CONFIG: AppConfig = {
   jira: { accessToken: '', refreshToken: '', tokenExpiresAt: 0, cloudId: '', domain: '', userDisplayName: '' },
-  harvest: { accessToken: '', refreshToken: '', tokenExpiresAt: 0, accountId: '', userDisplayName: '' },
+  harvest: { accessToken: '', refreshToken: '', tokenExpiresAt: 0, accountId: '', userDisplayName: '', baseUrl: '' },
   schedule: {
     workStartHour: 9,
     workStartMinute: 0,

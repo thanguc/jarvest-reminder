@@ -25,6 +25,8 @@ const api = {
   getUpdateInfo: (): Promise<UpdateInfo> => ipcRenderer.invoke('get-update-info'),
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke('check-for-updates'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('install-update'),
+  getReleaseNotes: (): Promise<{ version: string; body: string } | null> =>
+    ipcRenderer.invoke('get-release-notes'),
   onUpdateStatusChanged: (callback: (info: UpdateInfo) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, info: UpdateInfo): void => callback(info)
     ipcRenderer.on('update-status-changed', handler)

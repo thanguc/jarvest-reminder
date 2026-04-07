@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import NotificationShell from './NotificationShell'
 
-const CHANGELOG_URL = 'https://github.com/thanguc/jarvest-reminder/releases'
-
 export default function UpdateSuccessNotification(): JSX.Element {
   const [version, setVersion] = useState<string>('')
 
@@ -17,10 +15,7 @@ export default function UpdateSuccessNotification(): JSX.Element {
   }
 
   const handleViewChangelog = (): void => {
-    const url = version
-      ? `${CHANGELOG_URL}/tag/v${version}`
-      : CHANGELOG_URL
-    window.jarvest.openExternal(url)
+    window.jarvest.openSettings('general')
     window.jarvest.dismiss()
   }
 
