@@ -134,12 +134,26 @@ export async function authorizeHarvest(): Promise<void> {
     userDisplayName = `${me.first_name} ${me.last_name}`.trim() || me.email
   }
 
+  const companyRes = await net.fetch('https://api.harvestapp.com/v2/company', {
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+      'Harvest-Account-Id': String(account.id),
+      'User-Agent': 'JarvestReminder'
+    }
+  })
+  let baseUrl = ''
+  if (companyRes.ok) {
+    const company = await companyRes.json() as { base_uri: string }
+    baseUrl = company.base_uri
+  }
+
   const config = getConfig()
   config.harvest.accessToken = tokens.access_token
   config.harvest.refreshToken = tokens.refresh_token
   config.harvest.tokenExpiresAt = Date.now() + tokens.expires_in * 1000
   config.harvest.accountId = String(account.id)
   config.harvest.userDisplayName = userDisplayName
+  config.harvest.baseUrl = baseUrl
   saveConfig(config)
 }
 

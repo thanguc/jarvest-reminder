@@ -1,4 +1,5 @@
 import { app, ipcMain, shell } from 'electron'
+import https from 'https'
 import { getConfig, saveConfig } from './services/config'
 import {
   getRunningTimer,
@@ -135,5 +136,27 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('install-update', () => {
     installUpdate()
+  })
+
+  ipcMain.handle('get-release-notes', async () => {
+    return new Promise<{ version: string; body: string } | null>((resolve) => {
+      const req = https.get(
+        'https://api.github.com/repos/thanguc/jarvest-reminder/releases/latest',
+        { headers: { 'User-Agent': 'jarvest-reminder' } },
+        (res) => {
+          let data = ''
+          res.on('data', (chunk) => (data += chunk))
+          res.on('end', () => {
+            try {
+              const json = JSON.parse(data)
+              resolve({ version: json.tag_name as string, body: (json.body as string) || '' })
+            } catch {
+              resolve(null)
+            }
+          })
+        }
+      )
+      req.on('error', () => resolve(null))
+    })
   })
 }
