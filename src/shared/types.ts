@@ -116,7 +116,7 @@ export interface UpdateInfo {
 
 // ── Notification Types ──
 
-export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success'
+export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success' | 'offline-confirm' | 'go-online'
 
 // ── IPC Channel Types ──
 
@@ -140,4 +140,7 @@ export interface IpcChannels {
   'get-update-info': { args: void; result: UpdateInfo }
   'check-for-updates': { args: void; result: void }
   'install-update': { args: void; result: void }
+  'go-offline': { args: { until: 'today' | 'manual' }; result: void }
+  'go-online': { args: void; result: void }
+  'get-offline-state': { args: void; result: { active: boolean; until: 'today' | 'manual' | null } }
 }

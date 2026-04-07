@@ -2,10 +2,11 @@ import { Tray, Menu, MenuItemConstructorOptions, app, shell } from 'electron'
 import { showSettings, showNotification } from './windows'
 import { getTrayIcon, getTrayIconWithDot, getMenuDot } from './icon'
 import { isConfigured, getConfig } from './services/config'
-import { isWithinWorkingHoursNow, isPastWorkEndTime } from './scheduler'
+import { isWithinWorkingHoursNow, isPastWorkEndTime, handleGoOnline } from './scheduler'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
 import { getBrowseUrl } from './services/jira'
+import { isOfflineMode, getOfflineUntil } from './offline-state'
 import { HarvestTimeEntry } from '../shared/types'
 
 let tray: Tray | null = null
@@ -14,6 +15,7 @@ const REFRESH_COOLDOWN_MS = 60 * 1000
 
 // Kept across refreshes so the Stop Timer submenu action can use it
 let currentRunningTimerId: number | null = null
+let lastHoursText: string | null = null
 
 let blinkInterval: ReturnType<typeof setInterval> | null = null
 let blinkVisible = true
@@ -65,27 +67,36 @@ function buildRunningLabel(entry: HarvestTimeEntry): string {
 }
 
 function buildStatusSubmenu(
-  state: 'not-authorized' | 'idle' | 'running',
+  state: 'not-authorized' | 'idle' | 'running' | 'offline',
   ticketKey: string | null
 ): MenuItemConstructorOptions[] {
   if (state === 'not-authorized') {
     return [{ label: 'Authorize', click: () => showSettings() }]
   }
-  if (state === 'idle') {
-    return [{ label: 'Start Timer', click: () => showNotification('no-timer') }]
+  if (state === 'offline') {
+    return [{ label: 'Go Online', click: () => handleGoOnline().catch(console.error) }]
   }
+
   const items: MenuItemConstructorOptions[] = []
-  if (ticketKey) {
-    items.push({ label: `Browse ${ticketKey}`, click: () => shell.openExternal(getBrowseUrl(ticketKey)) })
-  }
-  items.push({
-    label: 'Stop Timer',
-    click: () => {
-      if (currentRunningTimerId !== null) {
-        handleTrayStopTimer(currentRunningTimerId)
-      }
+
+  if (state === 'idle') {
+    items.push({ label: 'Start Timer', click: () => showNotification('no-timer') })
+  } else {
+    if (ticketKey) {
+      items.push({ label: `Browse ${ticketKey}`, click: () => shell.openExternal(getBrowseUrl(ticketKey)) })
     }
-  })
+    items.push({
+      label: 'Stop Timer',
+      click: () => {
+        if (currentRunningTimerId !== null) {
+          handleTrayStopTimer(currentRunningTimerId)
+        }
+      }
+    })
+  }
+
+  items.push({ label: 'Go Offline', click: () => showNotification('offline-confirm') })
+
   return items
 }
 
@@ -105,7 +116,7 @@ async function handleTrayStopTimer(entryId: number): Promise<void> {
 function applyTrayState(
   statusText: string,
   hoursText: string | null,
-  state: 'checking' | 'not-authorized' | 'idle' | 'running',
+  state: 'checking' | 'not-authorized' | 'idle' | 'running' | 'offline',
   ticketKey: string | null = null
 ): void {
   if (!tray) return
@@ -116,10 +127,12 @@ function applyTrayState(
   tray.setToolTip(tooltip)
 
   const inWorkingHours = isWithinWorkingHoursNow()
-  const isWarning = (state === 'idle' && inWorkingHours)
+  const isWarning = state !== 'offline' && (
+    (state === 'idle' && inWorkingHours)
     || (state === 'running' && !inWorkingHours && isPastWorkEndTime())
+  )
 
-  const dotColor = state === 'not-authorized' ? '#C0C0C0'
+  const dotColor = state === 'not-authorized' || state === 'offline' ? '#C0C0C0'
     : isWarning ? '#FF0000'
     : state === 'running' ? '#F27A20'
     : inWorkingHours ? '#FFD700' : '#1558BC'
@@ -128,6 +141,9 @@ function applyTrayState(
     startBlink(dotColor)
   } else {
     stopBlink()
+    if (state !== 'checking') {
+      tray.setImage(getTrayIconWithDot(dotColor))
+    }
   }
 
   const statusItem: MenuItemConstructorOptions = state === 'checking'
@@ -138,7 +154,7 @@ function applyTrayState(
   const menuItems: MenuItemConstructorOptions[] = [statusItem]
   if (hoursText) menuItems.push({ label: hoursText, enabled: false })
   menuItems.push({ type: 'separator' })
-  if (isAuthorized) {
+  if (isAuthorized && state !== 'offline') {
     menuItems.push({ label: 'Go to Harvest', click: () => {
       const baseUrl = getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
       shell.openExternal(`${baseUrl}/time`)
@@ -160,6 +176,28 @@ async function doRefresh(): Promise<void> {
     applyTrayState('Idle (not authorized)', null, 'not-authorized')
     return
   }
+  applyTrayState('Refreshing...', lastHoursText, 'checking')
+
+  if (isOfflineMode()) {
+    currentRunningTimerId = null
+    const until = getOfflineUntil()
+    const statusText = until === 'today' ? 'Offline (today only)' : 'Offline (until go online)'
+    try {
+      const d = new Date()
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      const [runningTimer, dailyHours] = await Promise.all([getRunningTimer(), getDailyHours(today)])
+      if (runningTimer) {
+        console.log('[tray] offline mode — running timer detected on refresh, going online')
+        handleGoOnline('timer-detected').catch(console.error)
+        return
+      }
+      lastHoursText = `${formatHours(dailyHours)} spent today`
+      applyTrayState(statusText, lastHoursText, 'offline')
+    } catch {
+      applyTrayState(statusText, lastHoursText, 'offline')
+    }
+    return
+  }
   try {
     const d = new Date()
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -167,14 +205,14 @@ async function doRefresh(): Promise<void> {
       getRunningTimer(),
       getDailyHours(today)
     ])
-    const hoursText = formatHours(dailyHours)
+    lastHoursText = `${formatHours(dailyHours)} spent today`
     if (runningTimer) {
       currentRunningTimerId = runningTimer.id
       const ticketKey = extractTicketKey(runningTimer)
-      applyTrayState(buildRunningLabel(runningTimer), `${hoursText} spent today`, 'running', ticketKey)
+      applyTrayState(buildRunningLabel(runningTimer), lastHoursText, 'running', ticketKey)
     } else {
       currentRunningTimerId = null
-      applyTrayState('Idle', `${hoursText} spent today`, 'idle')
+      applyTrayState('Idle', lastHoursText, 'idle')
     }
   } catch {
     // silently ignore — keep existing status
