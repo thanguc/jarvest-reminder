@@ -1,8 +1,13 @@
 import { getConfig, isConfigured } from './services/config'
 import { getRunningTimer } from './services/harvest'
 import { showNotification, isNotificationVisible } from './windows'
-import { refreshTrayStatus } from './tray'
+import { refreshTrayStatus, forceRefreshTrayStatus } from './tray'
 import { isEodSummaryShownToday, markEodSummaryShown } from './eod-state'
+import {
+  isOfflineMode,
+  clearOfflineMode,
+  isOfflineExpiredForNewDay
+} from './offline-state'
 
 export { markEodSummaryShown }
 
@@ -46,6 +51,20 @@ function timestamp(): string {
   return new Date().toLocaleTimeString()
 }
 
+/**
+ * Exits offline mode, refreshes tray, shows the "back online" notification,
+ * then restarts the scheduler 5.5s later (after the notification auto-dismisses).
+ */
+export async function handleGoOnline(reason?: string): Promise<void> {
+  clearOfflineMode()
+  forceRefreshTrayStatus().catch(console.error)
+  showNotification('go-online', reason ? { reason } : undefined)
+  setTimeout(() => {
+    restartScheduler()
+    forceRefreshTrayStatus().catch(console.error)
+  }, 5500)
+}
+
 async function performEndOfDayCheck(): Promise<void> {
   console.log(`[scheduler] EOD check at ${timestamp()}`)
   if (!isConfigured()) { console.log('[scheduler] skipped — not configured'); return }
@@ -53,6 +72,18 @@ async function performEndOfDayCheck(): Promise<void> {
 
   try {
     const runningTimer = await getRunningTimer()
+
+    // In offline mode, only watch for running timers to auto-exit
+    if (isOfflineMode()) {
+      if (runningTimer) {
+        console.log('[scheduler] offline mode — running timer detected at EOD, going online')
+        await handleGoOnline('timer-detected')
+      } else {
+        console.log('[scheduler] offline mode — skipping EOD notification')
+      }
+      return
+    }
+
     if (runningTimer) {
       console.log(`[scheduler] timer running (${runningTimer.id}) — showing eod-running`)
       showNotification('eod-running')
@@ -90,6 +121,18 @@ async function performCheck(): Promise<void> {
     }
 
     const runningTimer = await getRunningTimer()
+
+    // In offline mode, only watch for running timers to auto-exit; skip no-timer reminders
+    if (isOfflineMode()) {
+      if (runningTimer) {
+        console.log('[scheduler] offline mode — running timer detected, going online')
+        await handleGoOnline('timer-detected')
+      } else {
+        console.log('[scheduler] offline mode — skipping no-timer notification')
+      }
+      return
+    }
+
     if (!runningTimer) {
       console.log('[scheduler] no timer — showing no-timer')
       showNotification('no-timer')
@@ -104,6 +147,14 @@ async function performCheck(): Promise<void> {
 
 export function startScheduler(): void {
   stopScheduler()
+
+  // Handle day rollover: if 'just today' offline mode has expired, exit it with notification
+  if (isOfflineExpiredForNewDay()) {
+    console.log('[scheduler] "just today" offline mode expired at new day — going online')
+    handleGoOnline().catch(console.error)
+    // handleGoOnline will call restartScheduler after 5.5s
+    return
+  }
 
   const config = getConfig()
   const { workStartHour, workStartMinute, workEndHour, workEndMinute, workDays, checkPeriodMinutes } = config.schedule
@@ -186,6 +237,7 @@ function scheduleMidnightRestart(): void {
   console.log(`[scheduler] midnight restart scheduled in ${Math.round(msUntilMidnight / 60000)}m`)
   midnightTimeout = setTimeout(() => {
     console.log(`[scheduler] midnight restart triggered at ${timestamp()}`)
+    // isOfflineExpiredForNewDay() check is handled inside startScheduler
     restartScheduler()
   }, msUntilMidnight)
 }
@@ -215,3 +267,4 @@ export function restartScheduler(): void {
   stopScheduler()
   startScheduler()
 }
+

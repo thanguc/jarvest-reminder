@@ -55,7 +55,7 @@ export default function EndOfDayNoTimer(): JSX.Element {
             onClick={handleEdit}
             className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
           >
-            Edit
+            Edit on Harvest
           </button>
         </>
       }

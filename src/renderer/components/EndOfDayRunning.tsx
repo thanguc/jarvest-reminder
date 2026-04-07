@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { HarvestTimeEntry } from '../../shared/types'
+import { AppConfig, HarvestTimeEntry } from '../../shared/types'
 import NotificationShell from './NotificationShell'
 
 const AUTO_STOP_SECONDS = 60
@@ -7,6 +7,7 @@ const CLOSE_DELAY_SECONDS = 5
 
 export default function EndOfDayRunning(): JSX.Element {
   const [entry, setEntry] = useState<HarvestTimeEntry | null>(null)
+  const [config, setConfig] = useState<AppConfig | null>(null)
   const [loading, setLoading] = useState(true)
   const [stopping, setStopping] = useState(false)
   const [stopped, setStopped] = useState(false)
@@ -17,17 +18,21 @@ export default function EndOfDayRunning(): JSX.Element {
   const closeCountdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    const fetchTimer = async (): Promise<void> => {
+    const fetchData = async (): Promise<void> => {
       try {
-        const timer = await window.jarvest.getRunningTimer()
+        const [timer, cfg] = await Promise.all([
+          window.jarvest.getRunningTimer(),
+          window.jarvest.getConfig(),
+        ])
         setEntry(timer)
+        setConfig(cfg)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch timer')
       } finally {
         setLoading(false)
       }
     }
-    fetchTimer()
+    fetchData()
   }, [])
 
   // Start countdown when entry is loaded
@@ -91,6 +96,13 @@ export default function EndOfDayRunning(): JSX.Element {
     window.jarvest.dismiss()
   }
 
+  const formatTime = (hour: number, minute: number): string => {
+    const period = hour >= 12 ? 'PM' : 'AM'
+    const h = hour % 12 || 12
+    const m = minute.toString().padStart(2, '0')
+    return `${h}:${m} ${period}`
+  }
+
   const formatHours = (hours: number): string => {
     const h = Math.floor(hours)
     const m = Math.round((hours - h) * 60)
@@ -143,7 +155,18 @@ export default function EndOfDayRunning(): JSX.Element {
         <div className="space-y-3">
           <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
             <p className="text-sm text-amber-800">
-              It's the end of your work day but you still have a timer running.
+              It's the end of your work day{config && (
+                <>
+                  {' '}(
+                  <button
+                    onClick={() => window.jarvest.openSettings('reminder')}
+                    className="underline hover:text-amber-600 transition-colors"
+                  >
+                    {formatTime(config.schedule.workStartHour, config.schedule.workStartMinute)} – {formatTime(config.schedule.workEndHour, config.schedule.workEndMinute)}
+                  </button>
+                  )
+                </>
+              )} but you still have a timer running.
             </p>
           </div>
 

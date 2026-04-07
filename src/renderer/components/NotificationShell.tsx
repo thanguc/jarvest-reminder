@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useRef, useEffect } from 'react'
 import Logo from './Logo'
 
 interface NotificationShellProps {
@@ -12,12 +12,25 @@ export default function NotificationShell({
   children,
   actions
 }: NotificationShellProps): JSX.Element {
+  const shellRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = shellRef.current
+    if (!el) return
+    const observer = new ResizeObserver(() => {
+      window.jarvest.resizeNotification(el.offsetHeight)
+    })
+    observer.observe(el)
+    window.jarvest.resizeNotification(el.offsetHeight)
+    return () => observer.disconnect()
+  }, [])
+
   const handleSettings = (): void => {
     window.jarvest.openSettings()
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden flex flex-col h-full">
+    <div ref={shellRef} className="bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#F27A20] to-[#1558BC]">
         <div className="flex items-center gap-2">
@@ -37,7 +50,7 @@ export default function NotificationShell({
       </div>
 
       {/* Content */}
-      <div className="flex-1 px-4 py-3 overflow-auto">
+      <div className="px-4 py-3">
         {children}
       </div>
 

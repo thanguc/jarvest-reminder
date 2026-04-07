@@ -4,8 +4,8 @@ import { is } from '@electron-toolkit/utils'
 import { NotificationView } from '../shared/types'
 import { getAppIcon } from './icon'
 
-const NOTIFICATION_WIDTH = 400
-const NOTIFICATION_HEIGHT = 280
+const NOTIFICATION_MAX_WIDTH = 400
+const NOTIFICATION_MAX_HEIGHT = 400
 const SETTINGS_WIDTH = 480
 const SETTINGS_HEIGHT = 560
 const MARGIN = 16
@@ -13,25 +13,23 @@ const MARGIN = 16
 let notificationWindow: BrowserWindow | null = null
 let settingsWindow: BrowserWindow | null = null
 
-function getRendererUrl(view: NotificationView): string {
+function getRendererUrl(view: NotificationView, params?: Record<string, string>): string {
+  const search = new URLSearchParams({ view, ...params }).toString()
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    return `${process.env['ELECTRON_RENDERER_URL']}?view=${view}`
+    return `${process.env['ELECTRON_RENDERER_URL']}?${search}`
   }
-  return `file://${join(__dirname, '../renderer/index.html')}?view=${view}`
+  return `file://${join(__dirname, '../renderer/index.html')}?${search}`
 }
 
-function createNotificationWindow(view: NotificationView): void {
+function createNotificationWindow(view: NotificationView, params?: Record<string, string>): void {
   const display = screen.getPrimaryDisplay()
   const { width, height } = display.workAreaSize
 
-  const winHeight = view === 'settings' ? SETTINGS_HEIGHT : NOTIFICATION_HEIGHT
-  const winWidth = view === 'settings' ? SETTINGS_WIDTH : NOTIFICATION_WIDTH
-
   const win = new BrowserWindow({
-    width: winWidth,
-    height: winHeight,
-    x: width - winWidth - MARGIN,
-    y: height - winHeight - MARGIN,
+    width: NOTIFICATION_MAX_WIDTH,
+    height: 1,
+    x: width - NOTIFICATION_MAX_WIDTH - MARGIN,
+    y: height - 1 - MARGIN,
     icon: getAppIcon(),
     frame: false,
     alwaysOnTop: true,
@@ -48,10 +46,15 @@ function createNotificationWindow(view: NotificationView): void {
   })
   notificationWindow = win
 
-  win.loadURL(getRendererUrl(view))
+  win.loadURL(getRendererUrl(view, params))
 
+  // Fallback: show at max height if resize IPC never fires
   win.once('ready-to-show', () => {
-    win.show()
+    setTimeout(() => {
+      if (!win.isDestroyed() && !win.isVisible()) {
+        resizeNotificationWindow(NOTIFICATION_MAX_HEIGHT)
+      }
+    }, 500)
   })
 
   win.on('closed', () => {
@@ -61,7 +64,23 @@ function createNotificationWindow(view: NotificationView): void {
   })
 }
 
-export function showNotification(view: NotificationView): void {
+export function resizeNotificationWindow(contentHeight: number): void {
+  if (!notificationWindow || notificationWindow.isDestroyed()) return
+  const display = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = display.workAreaSize
+  const clampedHeight = Math.min(Math.max(contentHeight, 60), NOTIFICATION_MAX_HEIGHT)
+  notificationWindow.setBounds({
+    x: screenWidth - NOTIFICATION_MAX_WIDTH - MARGIN,
+    y: screenHeight - clampedHeight - MARGIN,
+    width: NOTIFICATION_MAX_WIDTH,
+    height: clampedHeight
+  })
+  if (!notificationWindow.isVisible()) {
+    notificationWindow.show()
+  }
+}
+
+export function showNotification(view: NotificationView, params?: Record<string, string>): void {
   // Force-destroy all existing notification windows before showing a new one
   BrowserWindow.getAllWindows().forEach((win) => {
     if (win !== settingsWindow && !win.isDestroyed()) {
@@ -69,7 +88,7 @@ export function showNotification(view: NotificationView): void {
     }
   })
   notificationWindow = null
-  createNotificationWindow(view)
+  createNotificationWindow(view, params)
 }
 
 export function showSettings(tab?: string): void {

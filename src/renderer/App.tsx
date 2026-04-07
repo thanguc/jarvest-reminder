@@ -5,6 +5,8 @@ import EndOfDayRunning from './components/EndOfDayRunning'
 import SettingsDialog from './components/SettingsDialog'
 import UpdateAvailableNotification from './components/UpdateAvailableNotification'
 import UpdateSuccessNotification from './components/UpdateSuccessNotification'
+import OfflineNotification from './components/OfflineNotification'
+import GoOnlineNotification from './components/GoOnlineNotification'
 
 function getView(): NotificationView {
   const params = new URLSearchParams(window.location.search)
@@ -27,6 +29,10 @@ export default function App(): JSX.Element {
       return <UpdateAvailableNotification />
     case 'update-success':
       return <UpdateSuccessNotification />
+    case 'offline-confirm':
+      return <OfflineNotification />
+    case 'go-online':
+      return <GoOnlineNotification />
     default:
       return <NoTimerNotification />
   }
