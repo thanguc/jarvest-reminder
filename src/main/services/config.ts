@@ -1,17 +1,25 @@
 import Store from 'electron-store'
 import { AppConfig, DEFAULT_CONFIG } from '../../shared/types'
 
+interface OfflineStateData {
+  active: boolean
+  until: 'today' | 'manual' | null
+  date: string | null
+}
+
 interface StoreSchema {
   config: AppConfig
   availableUpdateVersion: string | null
   previousVersion: string | null
+  offlineState: OfflineStateData
 }
 
 const store = new Store<StoreSchema>({
   defaults: {
     config: DEFAULT_CONFIG,
     availableUpdateVersion: null,
-    previousVersion: null
+    previousVersion: null,
+    offlineState: { active: false, until: null, date: null }
   }
 })
 
@@ -47,4 +55,12 @@ export function getPreviousVersion(): string | null {
 
 export function setPreviousVersion(version: string | null): void {
   store.set('previousVersion', version)
+}
+
+export function getPersistedOfflineState(): OfflineStateData {
+  return store.get('offlineState')
+}
+
+export function setPersistedOfflineState(state: OfflineStateData): void {
+  store.set('offlineState', state)
 }

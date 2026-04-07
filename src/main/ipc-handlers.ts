@@ -10,9 +10,10 @@ import {
 } from './services/harvest'
 import { getInProgressTickets } from './services/jira'
 import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
-import { closeNotification, closeSettings, showNotification, showSettings } from './windows'
+import { closeNotification, closeSettings, showNotification, showSettings, resizeNotificationWindow } from './windows'
 import { AppConfig, JiraIssue } from '../shared/types'
-import { isWithinWorkingHoursNow, restartScheduler } from './scheduler'
+import { isWithinWorkingHoursNow, restartScheduler, handleGoOnline } from './scheduler'
+import { isOfflineMode, setOfflineMode, getOfflineUntil } from './offline-state'
 import { markEodSummaryShown } from './eod-state'
 import { refreshTrayStatus, forceRefreshTrayStatus } from './tray'
 import { getUpdateInfo, checkForUpdates, installUpdate } from './updater'
@@ -69,6 +70,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('dismiss', () => {
     closeNotification()
     closeSettings()
+  })
+
+  ipcMain.handle('resize-notification', (_event, { height }: { height: number }) => {
+    resizeNotificationWindow(height)
   })
 
   ipcMain.handle('is-within-working-hours', () => {
@@ -136,6 +141,28 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('install-update', () => {
     installUpdate()
+  })
+
+  ipcMain.handle('go-offline', async (_event, { until }: { until: 'today' | 'manual' }) => {
+    // Stop any running timer before going offline
+    try {
+      const runningTimer = await getRunningTimer()
+      if (runningTimer) {
+        await stopTimer(runningTimer.id)
+      }
+    } catch (err) {
+      console.error('[ipc] go-offline: failed to stop running timer:', err)
+    }
+    setOfflineMode(until)
+    forceRefreshTrayStatus().catch(console.error)
+  })
+
+  ipcMain.handle('go-online', async () => {
+    await handleGoOnline()
+  })
+
+  ipcMain.handle('get-offline-state', () => {
+    return { active: isOfflineMode(), until: getOfflineUntil() }
   })
 
   ipcMain.handle('get-release-notes', async () => {

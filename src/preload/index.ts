@@ -12,6 +12,7 @@ const api = {
     ipcRenderer.invoke('start-timer-for-ticket', issue),
   stopTimer: (entryId: number) => ipcRenderer.invoke('stop-timer', { entryId }),
   dismiss: () => ipcRenderer.invoke('dismiss'),
+  resizeNotification: (height: number): Promise<void> => ipcRenderer.invoke('resize-notification', { height }),
   isWithinWorkingHours: (): Promise<boolean> => ipcRenderer.invoke('is-within-working-hours'),
   showEodSummary: (): Promise<void> => ipcRenderer.invoke('show-eod-summary'),
   rescheduleEodCheck: (): Promise<void> => ipcRenderer.invoke('reschedule-eod-check'),
@@ -27,6 +28,10 @@ const api = {
   installUpdate: (): Promise<void> => ipcRenderer.invoke('install-update'),
   getReleaseNotes: (): Promise<{ version: string; body: string } | null> =>
     ipcRenderer.invoke('get-release-notes'),
+  goOffline: (until: 'today' | 'manual'): Promise<void> => ipcRenderer.invoke('go-offline', { until }),
+  goOnline: (): Promise<void> => ipcRenderer.invoke('go-online'),
+  getOfflineState: (): Promise<{ active: boolean; until: 'today' | 'manual' | null }> =>
+    ipcRenderer.invoke('get-offline-state'),
   onUpdateStatusChanged: (callback: (info: UpdateInfo) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, info: UpdateInfo): void => callback(info)
     ipcRenderer.on('update-status-changed', handler)
