@@ -3,7 +3,8 @@ import { TrayMenuState } from '../../shared/types'
 
 const MENU_MAIN_WIDTH = 220
 const MENU_SUBMENU_WIDTH = 160
-const MENU_GAP = 4
+const MENU_GAP = 0
+const SHADOW_BLEED = 20
 
 function buildSubmenuItems(state: TrayMenuState): { label: string; action: string }[] {
   const { state: s, ticketKey } = state
@@ -76,7 +77,7 @@ export default function TrayMenu(): JSX.Element {
 
   if (!state) return <div className="h-screen" />
 
-  const { statusText, hoursText } = state
+  const { statusText, hoursText, dotColor } = state
   const s = state.state
   const isAuthorized = s !== 'not-authorized' && s !== 'checking'
   const submenuItems = buildSubmenuItems(state)
@@ -85,15 +86,15 @@ export default function TrayMenu(): JSX.Element {
   // Submenu absolute position: aligned with status row top, offset to chosen side
   const submenuStyle: React.CSSProperties =
     submenuSide === 'right'
-      ? { left: MENU_MAIN_WIDTH + MENU_GAP, top: submenuTop }
-      : { right: MENU_MAIN_WIDTH + MENU_GAP, top: submenuTop }
+      ? { left: SHADOW_BLEED + MENU_MAIN_WIDTH + MENU_GAP, top: submenuTop }
+      : { right: SHADOW_BLEED + MENU_MAIN_WIDTH + MENU_GAP, top: submenuTop }
 
   // Main menu panel alignment: if submenu is to the left, main panel is on the right (ml-auto);
   // if submenu is to the right, main panel is on the left (mr-auto)
   const mainPanelClass = submenuSide === 'right' ? 'mr-auto' : 'ml-auto'
 
   return (
-    <div className="h-screen relative flex flex-col justify-end pb-1">
+    <div className="h-screen relative flex flex-col justify-end pb-1 px-5">
       {/* Submenu panel */}
       {submenuOpen && hasSubmenu && (
         <div
@@ -127,7 +128,12 @@ export default function TrayMenu(): JSX.Element {
           onMouseLeave={() => { if (hasSubmenu) scheduleHide() }}
         >
           <div className="flex items-center justify-between gap-1">
-            <div className="text-[12px] font-medium text-gray-700 leading-5 truncate flex-1">{statusText}</div>
+            <div className="flex items-center gap-1.5 flex-1 min-w-0">
+              {dotColor && (
+                <span className="flex-shrink-0 w-2 h-2 rounded-full" style={{ backgroundColor: dotColor }} />
+              )}
+              <div className="text-[12px] font-medium text-gray-700 leading-5 truncate">{statusText}</div>
+            </div>
             {hasSubmenu && (
               <svg className="w-3 h-3 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -135,7 +141,7 @@ export default function TrayMenu(): JSX.Element {
             )}
           </div>
           {hoursText && (
-            <div className="text-[11px] text-gray-400 leading-4 pb-0.5">{hoursText}</div>
+            <div className="text-[11px] text-gray-400 leading-4 pb-0.5 pl-[14px]">{hoursText}</div>
           )}
         </div>
 
@@ -154,7 +160,7 @@ export default function TrayMenu(): JSX.Element {
 function Item({ label, onClick, onHover }: { label: string; onClick: () => void; onHover?: () => void }): JSX.Element {
   return (
     <button
-      className="w-full text-left px-3 py-[5px] text-[13px] text-gray-800 hover:bg-gray-100 active:bg-gray-200 cursor-default leading-5"
+      className="w-full text-left px-3 pl-[26px] py-[5px] text-[13px] text-gray-800 hover:bg-gray-100 active:bg-gray-200 cursor-default leading-5"
       onClick={onClick}
       onMouseEnter={onHover}
     >
