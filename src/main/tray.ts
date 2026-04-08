@@ -161,6 +161,7 @@ function applyTrayState(
     statusText,
     hoursText,
     state,
+    dotColor: state === 'checking' ? null : dotColor,
     ticketKey,
     harvestBaseUrl: getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
   }

@@ -122,6 +122,7 @@ export interface TrayMenuState {
   statusText: string
   hoursText: string | null
   state: 'checking' | 'not-authorized' | 'idle' | 'running' | 'offline'
+  dotColor: string | null
   ticketKey: string | null
   harvestBaseUrl: string
 }

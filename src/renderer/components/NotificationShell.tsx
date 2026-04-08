@@ -30,7 +30,8 @@ export default function NotificationShell({
   }
 
   return (
-    <div ref={shellRef} className="bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
+    <div className="p-5">
+      <div ref={shellRef} className="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#F27A20] to-[#1558BC]">
         <div className="flex items-center gap-2">
@@ -57,6 +58,7 @@ export default function NotificationShell({
       {/* Actions */}
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100">
         {actions}
+      </div>
       </div>
     </div>
   )

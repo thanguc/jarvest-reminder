@@ -10,8 +10,9 @@ const SETTINGS_WIDTH = 480
 const SETTINGS_HEIGHT = 560
 const TRAY_MENU_MAIN_WIDTH = 220
 const TRAY_MENU_SUBMENU_WIDTH = 160
-const TRAY_MENU_GAP = 4
+const TRAY_MENU_GAP = 0
 const TRAY_MENU_WIDTH = TRAY_MENU_MAIN_WIDTH + TRAY_MENU_GAP + TRAY_MENU_SUBMENU_WIDTH
+const SHADOW_BLEED = 20
 const TRAY_MENU_HEIGHT = 320
 const MARGIN = 16
 
@@ -32,9 +33,9 @@ function createNotificationWindow(view: NotificationView, params?: Record<string
   const { width, height } = display.workAreaSize
 
   const win = new BrowserWindow({
-    width: NOTIFICATION_MAX_WIDTH,
+    width: NOTIFICATION_MAX_WIDTH + SHADOW_BLEED * 2,
     height: 1,
-    x: width - NOTIFICATION_MAX_WIDTH - MARGIN,
+    x: width - NOTIFICATION_MAX_WIDTH - MARGIN - SHADOW_BLEED,
     y: height - 1 - MARGIN,
     icon: getAppIcon(),
     frame: false,
@@ -76,10 +77,10 @@ export function resizeNotificationWindow(contentHeight: number): void {
   const { width: screenWidth, height: screenHeight } = display.workAreaSize
   const clampedHeight = Math.min(Math.max(contentHeight, 60), NOTIFICATION_MAX_HEIGHT)
   notificationWindow.setBounds({
-    x: screenWidth - NOTIFICATION_MAX_WIDTH - MARGIN,
-    y: screenHeight - clampedHeight - MARGIN,
-    width: NOTIFICATION_MAX_WIDTH,
-    height: clampedHeight
+    x: screenWidth - NOTIFICATION_MAX_WIDTH - MARGIN - SHADOW_BLEED,
+    y: screenHeight - clampedHeight - MARGIN - SHADOW_BLEED,
+    width: NOTIFICATION_MAX_WIDTH + SHADOW_BLEED * 2,
+    height: clampedHeight + SHADOW_BLEED * 2
   })
   if (!notificationWindow.isVisible()) {
     notificationWindow.show()
@@ -185,12 +186,12 @@ export function showTrayMenu(trayBounds: Electron.Rectangle): void {
 
   if (taskbarOnLeft) {
     // Menu opens to the right of the tray icon
-    x = trayRight
+    x = trayRight - SHADOW_BLEED
     y = Math.max(workArea.y, Math.min(trayBottom - TRAY_MENU_HEIGHT, workAreaBottom - TRAY_MENU_HEIGHT))
     submenuSide = 'right'
   } else if (taskbarOnRight) {
     // Menu opens to the left of the tray icon
-    x = trayBounds.x - TRAY_MENU_WIDTH
+    x = trayBounds.x - TRAY_MENU_WIDTH - SHADOW_BLEED
     y = Math.max(workArea.y, Math.min(trayBottom - TRAY_MENU_HEIGHT, workAreaBottom - TRAY_MENU_HEIGHT))
     submenuSide = 'left'
   } else {
@@ -202,17 +203,17 @@ export function showTrayMenu(trayBounds: Electron.Rectangle): void {
     // Prefer submenu to the right; fall back to left if it would clip the screen edge
     if (cursor.x + TRAY_MENU_WIDTH <= workAreaRight) {
       submenuSide = 'right'
-      x = cursor.x
+      x = cursor.x - SHADOW_BLEED
     } else {
       submenuSide = 'left'
       // Keep main panel left edge at cursor; submenu extends leftward
-      x = cursor.x - TRAY_MENU_SUBMENU_WIDTH - TRAY_MENU_GAP
+      x = cursor.x - TRAY_MENU_SUBMENU_WIDTH - TRAY_MENU_GAP - SHADOW_BLEED
     }
-    x = Math.max(workArea.x, Math.min(x, workAreaRight - TRAY_MENU_WIDTH))
+    x = Math.max(workArea.x - SHADOW_BLEED, Math.min(x, workAreaRight - TRAY_MENU_WIDTH - SHADOW_BLEED))
   }
 
   trayMenuWindow = new BrowserWindow({
-    width: TRAY_MENU_WIDTH,
+    width: TRAY_MENU_WIDTH + SHADOW_BLEED * 2,
     height: TRAY_MENU_HEIGHT,
     x,
     y,
