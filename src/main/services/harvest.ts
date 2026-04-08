@@ -150,3 +150,30 @@ export async function getProjectAssignments(): Promise<HarvestProjectAssignment[
   const data = await res.json()
   return data.project_assignments
 }
+
+export async function logTimeEntry(
+  projectId: number,
+  taskId: number,
+  hours: number,
+  notes: string,
+  spentDate?: string
+): Promise<HarvestTimeEntry> {
+  const d = new Date()
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  const body = {
+    project_id: projectId,
+    task_id: taskId,
+    spent_date: spentDate ?? today,
+    hours,
+    notes
+  }
+  const res = await harvestFetch('/time_entries', {
+    method: 'POST',
+    body: JSON.stringify(body)
+  })
+  if (!res.ok) {
+    const errBody = await res.text()
+    throw new Error(`Failed to log time entry: ${res.status} ${errBody}`)
+  }
+  return await res.json()
+}

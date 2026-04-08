@@ -5,25 +5,27 @@ interface NotificationShellProps {
   title: string
   children: React.ReactNode
   actions: React.ReactNode
+  /** Extra transparent pixels reserved above the shell (for overlaying dropdowns). */
+  topReserve?: number
 }
 
 export default function NotificationShell({
   title,
   children,
-  actions
+  actions,
+  topReserve = 0
 }: NotificationShellProps): JSX.Element {
   const shellRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const el = shellRef.current
     if (!el) return
-    const observer = new ResizeObserver(() => {
-      window.jarvest.resizeNotification(el.offsetHeight)
-    })
+    const resize = (): void => { window.jarvest.resizeNotification(el.offsetHeight + topReserve) }
+    const observer = new ResizeObserver(resize)
     observer.observe(el)
-    window.jarvest.resizeNotification(el.offsetHeight)
+    resize()
     return () => observer.disconnect()
-  }, [])
+  }, [topReserve])
 
   const handleSettings = (): void => {
     window.jarvest.openSettings()
@@ -31,6 +33,7 @@ export default function NotificationShell({
 
   return (
     <div className="p-5">
+      {topReserve > 0 && <div style={{ height: topReserve }} />}
       <div ref={shellRef} className="bg-white rounded-lg shadow-[0_4px_20px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-[#F27A20] to-[#1558BC]">

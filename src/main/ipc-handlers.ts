@@ -1,17 +1,18 @@
 import { app, ipcMain, shell } from 'electron'
 import https from 'https'
-import { getConfig, saveConfig } from './services/config'
+import { getConfig, saveConfig, getDailyScrumPrefs, saveDailyScrumPrefs } from './services/config'
 import {
   getRunningTimer,
   getDailyHours,
   startTimerForTicket,
   stopTimer,
-  getProjectAssignments
+  getProjectAssignments,
+  logTimeEntry
 } from './services/harvest'
 import { getInProgressTickets } from './services/jira'
 import { authorizeHarvest, authorizeJira, disconnectHarvest, disconnectJira } from './services/oauth'
 import { closeNotification, closeSettings, showNotification, showSettings, resizeNotificationWindow } from './windows'
-import { AppConfig, JiraIssue } from '../shared/types'
+import { AppConfig, DailyScrumPrefs, JiraIssue } from '../shared/types'
 import { isWithinWorkingHoursNow, restartScheduler, handleGoOnline } from './scheduler'
 import { isOfflineMode, setOfflineMode, getOfflineUntil } from './offline-state'
 import { markEodSummaryShown } from './eod-state'
@@ -176,6 +177,25 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('close-tray-menu', () => {
     hideTrayMenu()
+  })
+
+  ipcMain.handle('get-daily-scrum-prefs', () => {
+    return getDailyScrumPrefs()
+  })
+
+  ipcMain.handle('save-daily-scrum-prefs', (_event, prefs: DailyScrumPrefs) => {
+    saveDailyScrumPrefs(prefs)
+  })
+
+  ipcMain.handle('log-daily-scrum', async (_event, {
+    projectId,
+    taskId,
+    hours,
+    notes,
+    spentDate
+  }: { projectId: number; taskId: number; hours: number; notes: string; spentDate?: string }) => {
+    await logTimeEntry(projectId, taskId, hours, notes, spentDate)
+    forceRefreshTrayStatus().catch(console.error)
   })
 
   ipcMain.handle('get-release-notes', async () => {

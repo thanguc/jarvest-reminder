@@ -16,7 +16,6 @@ export default function UpdateSuccessNotification(): JSX.Element {
 
   const handleViewChangelog = (): void => {
     window.jarvest.openSettings('general')
-    window.jarvest.dismiss()
   }
 
   return (
