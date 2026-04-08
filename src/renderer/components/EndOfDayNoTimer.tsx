@@ -3,6 +3,7 @@ import NotificationShell from './NotificationShell'
 
 export default function EndOfDayNoTimer(): JSX.Element {
   const [totalHours, setTotalHours] = useState<number | null>(null)
+  const [loggedDate, setLoggedDate] = useState<string>('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -13,6 +14,7 @@ export default function EndOfDayNoTimer(): JSX.Element {
         const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         const hours = await window.jarvest.getDailyHours(today)
         setTotalHours(hours)
+        setLoggedDate(`${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch hours')
       } finally {
@@ -42,7 +44,7 @@ export default function EndOfDayNoTimer(): JSX.Element {
 
   return (
     <NotificationShell
-      title="End of Day Summary"
+      title="Daily Summary"
       actions={
         <>
           <button
@@ -75,10 +77,11 @@ export default function EndOfDayNoTimer(): JSX.Element {
         <div className="text-center py-4">
           <div className="mb-2">
             <svg className="w-10 h-10 mx-auto text-[#1558BC]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 7v5l3 3" />
             </svg>
           </div>
-          <p className="text-gray-600 text-sm mb-1">Time logged today</p>
+          <p className="text-gray-600 text-sm mb-1">Time logged today{loggedDate ? ` (${loggedDate})` : ''}</p>
           <p className="text-3xl font-bold text-gray-800">
             {totalHours !== null ? formatHours(totalHours) : '—'}
           </p>

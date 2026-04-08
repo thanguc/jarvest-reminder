@@ -50,12 +50,12 @@ export default function NotificationShell({
       </div>
 
       {/* Content */}
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 border-x border-gray-100">
         {children}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2.5 bg-gray-50 border-t border-gray-100">
+      <div className="flex items-center justify-end gap-2 px-4 py-2.5 bg-gray-50 border border-gray-100">
         {actions}
       </div>
     </div>

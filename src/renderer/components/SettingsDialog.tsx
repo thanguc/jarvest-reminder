@@ -2,6 +2,45 @@ import { useState, useEffect, useRef } from 'react'
 import { AppConfig, DEFAULT_CONFIG, UpdateInfo } from '../../shared/types'
 import Logo from './Logo'
 
+function renderMarkdown(markdown: string): string {
+  const lines = markdown.trim().split('\n')
+  const html: string[] = []
+  let inList = false
+
+  const inlineFormat = (text: string): string =>
+    text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`(.+?)`/g, '<code class="bg-gray-100 px-0.5 rounded text-[10px]">$1</code>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="#" class="text-blue-600 hover:underline" onclick="event.preventDefault()">$1</a>')
+
+  for (const raw of lines) {
+    const line = raw.trimEnd()
+
+    if (/^#{1,6}\s/.test(line)) {
+      if (inList) { html.push('</ul>'); inList = false }
+      const level = line.match(/^(#+)/)?.[1].length ?? 2
+      const text = line.replace(/^#+\s*/, '')
+      const tag = level <= 2 ? 'h3' : 'h4'
+      const cls = level <= 2
+        ? 'text-xs font-semibold text-gray-700 mt-2 mb-0.5'
+        : 'text-xs font-medium text-gray-600 mt-1.5 mb-0.5'
+      html.push(`<${tag} class="${cls}">${inlineFormat(text)}</${tag}>`)
+    } else if (/^[-*]\s/.test(line)) {
+      if (!inList) { html.push('<ul class="list-disc list-inside space-y-0.5 ml-1">'); inList = true }
+      html.push(`<li>${inlineFormat(line.replace(/^[-*]\s/, ''))}</li>`)
+    } else if (line === '') {
+      if (inList) { html.push('</ul>'); inList = false }
+    } else {
+      if (inList) { html.push('</ul>'); inList = false }
+      html.push(`<p class="mt-0.5">${inlineFormat(line)}</p>`)
+    }
+  }
+
+  if (inList) html.push('</ul>')
+  return html.join('\n')
+}
+
 function SpinnerIcon(): JSX.Element {
   return (
     <svg className="w-4 h-4 animate-spin text-current" fill="none" viewBox="0 0 24 24">
@@ -385,11 +424,10 @@ export default function SettingsDialog(): JSX.Element {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                       </svg>
                     </summary>
-                    <div className="max-h-36 overflow-auto mt-1.5">
-                      <pre className="text-xs text-gray-500 whitespace-pre-wrap font-sans leading-relaxed">
-                        {releaseNotes.body.trim()}
-                      </pre>
-                    </div>
+                    <div
+                      className="max-h-36 overflow-auto mt-1.5 text-xs text-gray-500 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: renderMarkdown(releaseNotes.body) }}
+                    />
                   </details>
                 )}
               </div>

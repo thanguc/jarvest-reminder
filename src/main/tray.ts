@@ -1,13 +1,13 @@
-import { Tray, Menu, MenuItemConstructorOptions, app, shell } from 'electron'
-import { showSettings, showNotification } from './windows'
-import { getTrayIcon, getTrayIconWithDot, getMenuDot } from './icon'
+import { Tray, app, shell } from 'electron'
+import { showSettings, showNotification, showTrayMenu, hideTrayMenu, sendToTrayMenu, isTrayMenuVisible } from './windows'
+import { getTrayIcon, getTrayIconWithDot } from './icon'
 import { isConfigured, getConfig } from './services/config'
 import { isWithinWorkingHoursNow, isPastWorkEndTime, handleGoOnline } from './scheduler'
 import { getRunningTimer, getDailyHours, stopTimer } from './services/harvest'
 import { markEodSummaryShown } from './eod-state'
 import { getBrowseUrl } from './services/jira'
 import { isOfflineMode, getOfflineUntil } from './offline-state'
-import { HarvestTimeEntry } from '../shared/types'
+import { HarvestTimeEntry, TrayMenuState } from '../shared/types'
 
 let tray: Tray | null = null
 let lastRefreshTime = 0
@@ -16,6 +16,7 @@ const REFRESH_COOLDOWN_MS = 60 * 1000
 // Kept across refreshes so the Stop Timer submenu action can use it
 let currentRunningTimerId: number | null = null
 let lastHoursText: string | null = null
+let currentTrayMenuState: TrayMenuState | null = null
 
 let blinkInterval: ReturnType<typeof setInterval> | null = null
 let blinkVisible = true
@@ -66,40 +67,6 @@ function buildRunningLabel(entry: HarvestTimeEntry): string {
   return 'A manual timer is running'
 }
 
-function buildStatusSubmenu(
-  state: 'not-authorized' | 'idle' | 'running' | 'offline',
-  ticketKey: string | null
-): MenuItemConstructorOptions[] {
-  if (state === 'not-authorized') {
-    return [{ label: 'Authorize', click: () => showSettings() }]
-  }
-  if (state === 'offline') {
-    return [{ label: 'Go Online', click: () => handleGoOnline().catch(console.error) }]
-  }
-
-  const items: MenuItemConstructorOptions[] = []
-
-  if (state === 'idle') {
-    items.push({ label: 'Start Timer', click: () => showNotification('no-timer') })
-  } else {
-    if (ticketKey) {
-      items.push({ label: `Browse ${ticketKey}`, click: () => shell.openExternal(getBrowseUrl(ticketKey)) })
-    }
-    items.push({
-      label: 'Stop Timer',
-      click: () => {
-        if (currentRunningTimerId !== null) {
-          handleTrayStopTimer(currentRunningTimerId)
-        }
-      }
-    })
-  }
-
-  items.push({ label: 'Go Offline', click: () => showNotification('offline-confirm') })
-
-  return items
-}
-
 async function handleTrayStopTimer(entryId: number): Promise<void> {
   try {
     await stopTimer(entryId)
@@ -111,6 +78,49 @@ async function handleTrayStopTimer(entryId: number): Promise<void> {
   } catch (err) {
     console.error('[tray] stop timer failed:', err)
   }
+}
+
+export function handleTrayMenuAction(action: string): void {
+  hideTrayMenu()
+  switch (action) {
+    case 'authorize':
+      showSettings()
+      break
+    case 'go-online':
+      handleGoOnline().catch(console.error)
+      break
+    case 'start-timer':
+      showNotification('no-timer')
+      break
+    case 'stop-timer':
+      if (currentRunningTimerId !== null) {
+        handleTrayStopTimer(currentRunningTimerId)
+      }
+      break
+    case 'browse-ticket': {
+      const key = currentTrayMenuState?.ticketKey
+      if (key) shell.openExternal(getBrowseUrl(key))
+      break
+    }
+    case 'go-offline':
+      showNotification('offline-confirm')
+      break
+    case 'go-to-harvest': {
+      const baseUrl = getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
+      shell.openExternal(`${baseUrl}/time`)
+      break
+    }
+    case 'settings':
+      showSettings()
+      break
+    case 'quit':
+      app.quit()
+      break
+  }
+}
+
+export function getTrayMenuState(): TrayMenuState | null {
+  return currentTrayMenuState
 }
 
 function applyTrayState(
@@ -146,26 +156,17 @@ function applyTrayState(
     }
   }
 
-  const statusItem: MenuItemConstructorOptions = state === 'checking'
-    ? { label: statusText, enabled: false }
-    : { label: statusText, icon: getMenuDot(dotColor), submenu: buildStatusSubmenu(state, ticketKey) }
-
-  const isAuthorized = state !== 'checking' && state !== 'not-authorized'
-  const menuItems: MenuItemConstructorOptions[] = [statusItem]
-  if (hoursText) menuItems.push({ label: hoursText, enabled: false })
-  menuItems.push({ type: 'separator' })
-  if (isAuthorized && state !== 'offline') {
-    menuItems.push({ label: 'Go to Harvest', click: () => {
-      const baseUrl = getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
-      shell.openExternal(`${baseUrl}/time`)
-    } })
+  // Update stored state and push live update to open menu window
+  currentTrayMenuState = {
+    statusText,
+    hoursText,
+    state,
+    ticketKey,
+    harvestBaseUrl: getConfig().harvest.baseUrl || 'https://app.harvestapp.com'
   }
-  menuItems.push(
-    { label: 'Settings', click: () => showSettings() },
-    { label: 'Quit', click: () => app.quit() }
-  )
-  const contextMenu = Menu.buildFromTemplate(menuItems)
-  tray.setContextMenu(contextMenu)
+  if (isTrayMenuVisible()) {
+    sendToTrayMenu(currentTrayMenuState)
+  }
 }
 
 async function doRefresh(): Promise<void> {
@@ -176,7 +177,6 @@ async function doRefresh(): Promise<void> {
     applyTrayState('Idle (not authorized)', null, 'not-authorized')
     return
   }
-  applyTrayState('Refreshing...', lastHoursText, 'checking')
 
   if (isOfflineMode()) {
     currentRunningTimerId = null
@@ -240,12 +240,21 @@ export function createTray(): Tray {
   refreshTrayStatus().catch(console.error)
   tray.on('double-click', () => showSettings())
   tray.on('mouse-enter', () => triggerBackgroundRefresh())
-  tray.on('right-click', () => triggerBackgroundRefresh())
+  tray.on('right-click', () => {
+    triggerBackgroundRefresh()
+    if (!tray) return
+    if (isTrayMenuVisible()) {
+      hideTrayMenu()
+    } else {
+      showTrayMenu(tray.getBounds())
+    }
+  })
   return tray
 }
 
 export function destroyTray(): void {
   stopBlink()
+  hideTrayMenu()
   if (tray) {
     tray.destroy()
     tray = null
