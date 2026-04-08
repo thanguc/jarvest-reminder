@@ -15,7 +15,8 @@ import { AppConfig, JiraIssue } from '../shared/types'
 import { isWithinWorkingHoursNow, restartScheduler, handleGoOnline } from './scheduler'
 import { isOfflineMode, setOfflineMode, getOfflineUntil } from './offline-state'
 import { markEodSummaryShown } from './eod-state'
-import { refreshTrayStatus, forceRefreshTrayStatus } from './tray'
+import { refreshTrayStatus, forceRefreshTrayStatus, getTrayMenuState, handleTrayMenuAction } from './tray'
+import { hideTrayMenu } from './windows'
 import { getUpdateInfo, checkForUpdates, installUpdate } from './updater'
 
 export function registerIpcHandlers(): void {
@@ -163,6 +164,18 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('get-offline-state', () => {
     return { active: isOfflineMode(), until: getOfflineUntil() }
+  })
+
+  ipcMain.handle('get-tray-menu-state', () => {
+    return getTrayMenuState()
+  })
+
+  ipcMain.handle('tray-menu-action', (_event, { action }: { action: string }) => {
+    handleTrayMenuAction(action)
+  })
+
+  ipcMain.handle('close-tray-menu', () => {
+    hideTrayMenu()
   })
 
   ipcMain.handle('get-release-notes', async () => {

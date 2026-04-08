@@ -116,7 +116,15 @@ export interface UpdateInfo {
 
 // ── Notification Types ──
 
-export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success' | 'offline-confirm' | 'go-online'
+export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success' | 'offline-confirm' | 'go-online' | 'tray-menu'
+
+export interface TrayMenuState {
+  statusText: string
+  hoursText: string | null
+  state: 'checking' | 'not-authorized' | 'idle' | 'running' | 'offline'
+  ticketKey: string | null
+  harvestBaseUrl: string
+}
 
 // ── IPC Channel Types ──
 

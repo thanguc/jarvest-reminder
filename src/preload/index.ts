@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { AppConfig, JiraIssue, UpdateInfo } from '../shared/types'
+import { AppConfig, JiraIssue, TrayMenuState, UpdateInfo } from '../shared/types'
 
 const api = {
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('get-config'),
@@ -36,6 +36,14 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, info: UpdateInfo): void => callback(info)
     ipcRenderer.on('update-status-changed', handler)
     return () => ipcRenderer.removeListener('update-status-changed', handler)
+  },
+  getTrayMenuState: (): Promise<TrayMenuState | null> => ipcRenderer.invoke('get-tray-menu-state'),
+  trayMenuAction: (action: string): Promise<void> => ipcRenderer.invoke('tray-menu-action', { action }),
+  closeTrayMenu: (): Promise<void> => ipcRenderer.invoke('close-tray-menu'),
+  onTrayMenuStateChanged: (callback: (state: TrayMenuState) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: TrayMenuState): void => callback(state)
+    ipcRenderer.on('tray-menu-state', handler)
+    return () => ipcRenderer.removeListener('tray-menu-state', handler)
   }
 }
 

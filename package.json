@@ -2,7 +2,7 @@
   "name": "jarvest-reminder",
   "description": "Jarvest Reminder",
   "author": "Thang Uong",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
