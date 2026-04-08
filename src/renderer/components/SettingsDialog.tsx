@@ -213,7 +213,8 @@ export default function SettingsDialog(): JSX.Element {
     if (config.schedule.workDays.length === 0) e['schedule.workDays'] = 'Select at least one day'
     const startMinutes = config.schedule.workStartHour * 60 + config.schedule.workStartMinute
     const endMinutes = config.schedule.workEndHour * 60 + config.schedule.workEndMinute
-    if (startMinutes >= endMinutes) e['schedule.workHours'] = 'Start time must be before end time'
+    if (isNaN(startMinutes) || isNaN(endMinutes)) e['schedule.workHours'] = 'Invalid time value'
+    else if (startMinutes >= endMinutes) e['schedule.workHours'] = 'Start time must be before end time'
     if (config.schedule.checkPeriodMinutes < 5 || config.schedule.checkPeriodMinutes > 240) e['schedule.checkPeriod'] = 'Must be between 5 and 240 minutes'
     if (Object.keys(e).length > 0) {
       setErrors(e)
@@ -499,7 +500,9 @@ export default function SettingsDialog(): JSX.Element {
                     type="time"
                     value={`${String(config.schedule.workStartHour).padStart(2, '0')}:${String(config.schedule.workStartMinute).padStart(2, '0')}`}
                     onChange={(e) => {
+                      if (!e.target.value) return
                       const [h, m] = e.target.value.split(':').map(Number)
+                      if (isNaN(h) || isNaN(m)) return
                       updateSchedule('workStartHour', h)
                       updateSchedule('workStartMinute', m)
                       setErrors((prev) => ({ ...prev, 'schedule.workHours': '' }))
@@ -513,7 +516,9 @@ export default function SettingsDialog(): JSX.Element {
                     type="time"
                     value={`${String(config.schedule.workEndHour).padStart(2, '0')}:${String(config.schedule.workEndMinute).padStart(2, '0')}`}
                     onChange={(e) => {
+                      if (!e.target.value) return
                       const [h, m] = e.target.value.split(':').map(Number)
+                      if (isNaN(h) || isNaN(m)) return
                       updateSchedule('workEndHour', h)
                       updateSchedule('workEndMinute', m)
                       setErrors((prev) => ({ ...prev, 'schedule.workHours': '' }))
