@@ -1,5 +1,5 @@
 import Store from 'electron-store'
-import { AppConfig, DEFAULT_CONFIG } from '../../shared/types'
+import { AppConfig, DEFAULT_CONFIG, DailyScrumPrefs } from '../../shared/types'
 
 interface OfflineStateData {
   active: boolean
@@ -12,6 +12,7 @@ interface StoreSchema {
   availableUpdateVersion: string | null
   previousVersion: string | null
   offlineState: OfflineStateData
+  dailyScrumPrefs: DailyScrumPrefs
 }
 
 const store = new Store<StoreSchema>({
@@ -19,7 +20,8 @@ const store = new Store<StoreSchema>({
     config: DEFAULT_CONFIG,
     availableUpdateVersion: null,
     previousVersion: null,
-    offlineState: { active: false, until: null, date: null }
+    offlineState: { active: false, until: null, date: null },
+    dailyScrumPrefs: { projectId: null, taskId: null, notes: '' }
   }
 })
 
@@ -63,4 +65,12 @@ export function getPersistedOfflineState(): OfflineStateData {
 
 export function setPersistedOfflineState(state: OfflineStateData): void {
   store.set('offlineState', state)
+}
+
+export function getDailyScrumPrefs(): DailyScrumPrefs {
+  return store.get('dailyScrumPrefs')
+}
+
+export function saveDailyScrumPrefs(prefs: DailyScrumPrefs): void {
+  store.set('dailyScrumPrefs', prefs)
 }

@@ -110,6 +110,9 @@ export function handleTrayMenuAction(action: string): void {
       shell.openExternal(`${baseUrl}/time`)
       break
     }
+    case 'log-daily-scrum':
+      showNotification('daily-scrum')
+      break
     case 'settings':
       showSettings()
       break

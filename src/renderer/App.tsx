@@ -8,6 +8,7 @@ import UpdateSuccessNotification from './components/UpdateSuccessNotification'
 import OfflineNotification from './components/OfflineNotification'
 import GoOnlineNotification from './components/GoOnlineNotification'
 import TrayMenu from './components/TrayMenu'
+import DailyScrumNotification from './components/DailyScrumNotification'
 
 function getView(): NotificationView {
   const params = new URLSearchParams(window.location.search)
@@ -36,6 +37,8 @@ export default function App(): JSX.Element {
       return <GoOnlineNotification />
     case 'tray-menu':
       return <TrayMenu />
+    case 'daily-scrum':
+      return <DailyScrumNotification />
     default:
       return <NoTimerNotification />
   }

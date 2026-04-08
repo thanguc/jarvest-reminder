@@ -116,7 +116,13 @@ export interface UpdateInfo {
 
 // ── Notification Types ──
 
-export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success' | 'offline-confirm' | 'go-online' | 'tray-menu'
+export type NotificationView = 'no-timer' | 'eod-summary' | 'eod-running' | 'settings' | 'update-available' | 'update-success' | 'offline-confirm' | 'go-online' | 'tray-menu' | 'daily-scrum'
+
+export interface DailyScrumPrefs {
+  projectId: number | null
+  taskId: number | null
+  notes: string
+}
 
 export interface TrayMenuState {
   statusText: string

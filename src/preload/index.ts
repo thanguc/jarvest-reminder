@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { AppConfig, JiraIssue, TrayMenuState, UpdateInfo } from '../shared/types'
+import { AppConfig, DailyScrumPrefs, JiraIssue, TrayMenuState, UpdateInfo } from '../shared/types'
 
 const api = {
   getConfig: (): Promise<AppConfig> => ipcRenderer.invoke('get-config'),
@@ -44,7 +44,11 @@ const api = {
     const handler = (_event: Electron.IpcRendererEvent, state: TrayMenuState): void => callback(state)
     ipcRenderer.on('tray-menu-state', handler)
     return () => ipcRenderer.removeListener('tray-menu-state', handler)
-  }
+  },
+  getDailyScrumPrefs: (): Promise<DailyScrumPrefs> => ipcRenderer.invoke('get-daily-scrum-prefs'),
+  saveDailyScrumPrefs: (prefs: DailyScrumPrefs): Promise<void> => ipcRenderer.invoke('save-daily-scrum-prefs', prefs),
+  logDailyScrum: (projectId: number, taskId: number, hours: number, notes: string, spentDate?: string): Promise<void> =>
+    ipcRenderer.invoke('log-daily-scrum', { projectId, taskId, hours, notes, spentDate })
 }
 
 export type JarvestApi = typeof api
