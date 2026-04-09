@@ -23,3 +23,7 @@ jobs:
         run: npx electron-vite build && npx electron-builder --config electron-builder.yml --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAIN_VITE_HARVEST_CLIENT_ID: ${{ secrets.MAIN_VITE_HARVEST_CLIENT_ID }}
+          MAIN_VITE_HARVEST_CLIENT_SECRET: ${{ secrets.MAIN_VITE_HARVEST_CLIENT_SECRET }}
+          MAIN_VITE_JIRA_CLIENT_ID: ${{ secrets.MAIN_VITE_JIRA_CLIENT_ID }}
+          MAIN_VITE_JIRA_CLIENT_SECRET: ${{ secrets.MAIN_VITE_JIRA_CLIENT_SECRET }}
